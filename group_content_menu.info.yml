@@ -1,6 +1,6 @@
 name: Group content menu
 type: module
-description: Provides a group menu entity
+description: Provides features for a menu per group
 package: Group
 core: 8.x
 core_version_requirement: ^8 || ^9
