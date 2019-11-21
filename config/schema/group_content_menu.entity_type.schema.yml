@@ -1,0 +1,12 @@
+group_content_menu.group_content_menu_type.*:
+  type: config_entity
+  label: 'Group content menu type config'
+  mapping:
+    id:
+      type: string
+      label: 'ID'
+    label:
+      type: label
+      label: 'Label'
+    uuid:
+      type: string

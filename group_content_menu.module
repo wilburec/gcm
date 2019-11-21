@@ -1,0 +1,224 @@
+<?php
+
+/**
+ * @file
+ * Provides a group content menu entity type.
+ */
+
+use Drupal\Core\Entity\EntityInterface;
+use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Render\Element;
+use Drupal\Core\Url;
+use Drupal\group\Entity\Group;
+use Drupal\group\Entity\GroupContent;
+use Drupal\group\Entity\GroupContentInterface;
+use Drupal\group\Entity\GroupInterface;
+use Drupal\group\Entity\GroupType;
+use Drupal\group_content_menu\Entity\GroupContentMenuType;
+use Drupal\node\Entity\NodeType;
+use Drupal\system\Entity\Menu;
+use Drupal\system\MenuInterface;
+
+/**
+ * Implements hook_theme().
+ */
+function group_content_menu_theme() {
+  return [
+    'group_content_menu' => [
+      'render element' => 'elements',
+    ],
+  ];
+}
+
+/**
+ * Prepares variables for group content menu templates.
+ *
+ * Default template: group-content-menu.html.twig.
+ *
+ * @param array $variables
+ *   An associative array containing:
+ *   - elements: An associative array containing the group content menu
+ *     information and any fields attached to the entity.
+ *   - attributes: HTML attributes for the containing element.
+ */
+function template_preprocess_group_content_menu(array &$variables) {
+  foreach (Element::children($variables['elements']) as $key) {
+    $variables['content'][$key] = $variables['elements'][$key];
+  }
+}
+
+/**
+ * Implements hook_entity_operation().
+ */
+function group_content_menu_entity_operation($entity) {
+  $operations = [];
+
+  if ($entity->getEntityTypeId() == 'group' && \Drupal::moduleHandler()->moduleExists('views')) {
+    if ($entity->hasPermission('access group content menu overview', \Drupal::currentUser())) {
+      $operations['menus'] = [
+        'title' => t('Menus'),
+        'weight' => 20,
+        'url' => Url::fromRoute('entity.group_content_menu.collection', ['group' => $entity->id()]),
+      ];
+    }
+  }
+
+  return $operations;
+}
+
+/**
+ * Implements hook_module_implements_alter().
+ */
+function group_content_menu_module_implements_alter(&$implementations, $hook) {
+  // Make sure our hook_node_form_alter runs after the menu_ui module.
+  if ($hook === 'form_alter' && isset($implementations['group_content_menu'])) {
+    $group_content_menu = $implementations['group_content_menu'];
+    unset($implementations['group_content_menu']);
+    $implementations['group_content_menu'] = $group_content_menu;
+  }
+}
+
+/**
+ * Implements hook_form_BASE_FORM_ID_alter().
+ */
+function group_content_menu_form_node_form_alter(&$form, FormStateInterface $form_state) {
+  /** @var \Drupal\node\NodeInterface $node */
+  $node = $form_state->getFormObject()->getEntity();
+  /** @var \Drupal\node\NodeTypeInterface $node_type */
+  $node_type = NodeType::load($node->bundle());
+  $available_menus = $node_type->getThirdPartySetting('menu_ui', 'available_menus', ['main']);
+  $menu_ui_menus = array_map(static function (MenuInterface $menu) {
+    return $menu->label();
+  }, Menu::loadMultiple($available_menus));
+  $groups = [];
+  // Look for groups the node is part of.
+  if ($group_id = $form_state->get('group')) {
+    $groups[] = $group_id;
+  }
+  elseif (!$node->isNew()) {
+    $group_contents = GroupContent::loadByEntity($node);
+    $group_ids = array_map(static function (GroupContent $group_content) {
+      return $group_content->getGroup()->id();
+    }, $group_contents);
+    $groups = Group::loadMultiple($group_ids);
+  }
+
+  $group_menus = [];
+  if ($groups) {
+    foreach ($groups as $group) {
+      $menu_names = array_map(static function (GroupContentInterface $group_content) {
+        return ['group-menu-' . $group_content->getEntity()->id() => $group_content->getEntity()->label()];
+      }, group_content_menu_get_menus_per_group($group));
+      $group_menus[] = $menu_names;
+    }
+    // Unpack the group menus.
+    $group_menus = array_merge(...array_merge(...$group_menus));
+    $group_menus = array_unique($group_menus);
+    $defaults = menu_ui_get_menu_link_defaults($node);
+    if ($defaults['id']) {
+      $default = $defaults['menu_name'] . ':' . $defaults['parent'];
+    }
+    else {
+      $default = $node_type->getThirdPartySetting('menu_ui', 'parent', 'main:');
+    }
+    /** @var \Drupal\Core\Menu\MenuParentFormSelectorInterface $menu_parent_selector */
+    $menu_parent_selector = \Drupal::service('menu.parent_form_selector');
+    $parent_element = $menu_parent_selector->parentSelectElement($default, $defaults['id'], array_merge($group_menus, $menu_ui_menus));
+    $form['menu']['link']['menu_parent'] = $parent_element;
+  }
+}
+
+/**
+ * Implements hook_ENTITY_TYPE_insert().
+ */
+function group_content_menu_group_insert(EntityInterface $entity) {
+  $plugins = group_content_menu_get_plugins_per_group($entity);
+  // If there are no group menus enabled, bail.
+  if (!$plugins) {
+    return;
+  }
+
+  foreach ($plugins as $plugin) {
+    $group_type_configuration = $plugin->getConfiguration();
+    $auto_create_group_menu = $group_type_configuration['auto_create_group_menu'];
+    if (!$auto_create_group_menu) {
+      continue;
+    }
+    $group_content_type = GroupContentMenuType::load($plugin->getDerivativeId());
+    $group_menu = \Drupal::entityTypeManager()->getStorage('group_content_menu')->create([
+      'label' => $group_content_type->label(),
+      'bundle' => $plugin->getDerivativeId(),
+    ]);
+    $group_menu->save();
+
+    // Add menu link for group if enabled.
+    $auto_create_home_link = $group_type_configuration['auto_create_home_link'];
+    if ($auto_create_home_link) {
+      $menu_name = 'group-menu-' . $group_menu->id();
+      $menu_link = \Drupal::entityTypeManager()->getStorage('menu_link_content')->create([
+        'title' => $group_type_configuration['auto_create_home_link_title'],
+        'link' => [
+          'uri' => 'internal:/group/' . $entity->id(),
+        ],
+        'menu_name' => $menu_name,
+        'bundle' => $menu_name,
+      ]);
+      $menu_link->save();
+    }
+
+    $group_content = \Drupal::entityTypeManager()->getStorage('group_content')->create([
+      'type' => $plugin->getContentTypeConfigId(),
+      'gid' => $entity->id(),
+      'label' => $group_content_type->label(),
+      'entity_id' => $group_menu,
+    ]);
+    $group_content->save();
+  }
+}
+
+/**
+ * Implements hook_ENTITY_TYPE_delete().
+ */
+function group_content_menu_group_delete(EntityInterface $entity) {
+  // Remove the group menu and recursively its links on group deletion.
+  foreach (group_content_menu_get_menus_per_group($entity) as $group_content) {
+    $group_content->getEntity()->delete();
+  }
+}
+
+/**
+ * Get group content menus per group.
+ *
+ * @param \Drupal\group\Entity\GroupInterface $group
+ *   The group.
+ *
+ * @return \Drupal\group\Entity\GroupContentInterface[]
+ *   The related group contents.
+ */
+function group_content_menu_get_menus_per_group(GroupInterface $group) {
+  $plugins = group_content_menu_get_plugins_per_group($group);
+  $instances = [];
+  foreach (array_keys($plugins) as $plugin_id) {
+    $instances[] = \Drupal::entityTypeManager()->getStorage('group_content')->loadByGroup($group, $plugin_id);
+  }
+  return array_merge(...$instances);
+}
+
+/**
+ * Get group content menu plugins per group.
+ *
+ * @param \Drupal\group\Entity\GroupInterface $group
+ *   The group.
+ *
+ * @return \Drupal\group\Plugin\GroupContentEnablerInterface[]
+ *   The group menu plugins.
+ */
+function group_content_menu_get_plugins_per_group(GroupInterface $group) {
+  $group_type = GroupType::load($group->bundle());
+  /** @var \Drupal\group\Plugin\GroupContentEnablerManagerInterface $plugin_manager */
+  $plugin_manager = \Drupal::service('plugin.manager.group_content_enabler');
+  $installed = $plugin_manager->getInstalled($group_type);
+  return array_filter($installed->getIterator()->getArrayCopy(), static function ($plugin_id) {
+    return strpos($plugin_id, 'group_content_menu:') === 0;
+  }, ARRAY_FILTER_USE_KEY);
+}
