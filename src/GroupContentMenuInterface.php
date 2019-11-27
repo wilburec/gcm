@@ -9,4 +9,9 @@ use Drupal\Core\Entity\ContentEntityInterface;
  */
 interface GroupContentMenuInterface extends ContentEntityInterface {
 
+  /**
+   * The menu name prefix.
+   */
+  const MENU_PREFIX = 'menu_link_content-group-menu-';
+
 }

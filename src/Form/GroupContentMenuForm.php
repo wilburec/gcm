@@ -15,6 +15,7 @@ use Drupal\Core\Menu\MenuTreeParameters;
 use Drupal\Core\Render\Element;
 use Drupal\Core\Url;
 use Drupal\Core\Utility\LinkGeneratorInterface;
+use Drupal\group_content_menu\GroupContentMenuInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -121,7 +122,7 @@ class GroupContentMenuForm extends ContentEntityForm {
 
     $form['#attached']['library'][] = 'menu_ui/drupal.menu_ui.adminforms';
 
-    $tree = $this->menuTree->load('group-menu-' . $this->entity->id(), new MenuTreeParameters());
+    $tree = $this->menuTree->load(GroupContentMenuInterface::MENU_PREFIX . $this->entity->id(), new MenuTreeParameters());
 
     // We indicate that a menu administrator is running the menu access check.
     $this->getRequest()->attributes->set('_menu_admin', TRUE);
@@ -377,17 +378,15 @@ class GroupContentMenuForm extends ContentEntityForm {
       $group_content->save();
     }
 
-    $link = $menu->toLink($this->t('Edit'), 'edit_form')->toRenderable();
-
     $logger_arguments = ['%label' => $this->entity->label()];
-    $message_arguments = $logger_arguments + ['%link' => \Drupal::service('renderer')->render($link)];
+    $message_arguments = $logger_arguments + ['@url' => $menu->toUrl('edit-form')->toString()];
 
     if ($status === SAVED_NEW) {
-      $this->messenger()->addStatus($this->t('New group menu <a href="%link">%label</a> has been created.', $message_arguments));
+      $this->messenger()->addStatus($this->t('New group menu <a href="@url">%label</a> has been created.', $message_arguments));
       $this->logger('group_content_menu')->notice('Created new group menu %label', $logger_arguments);
     }
     else {
-      $this->messenger()->addStatus($this->t('The group menu <a href="%link">%label</a> has been update.', $message_arguments));
+      $this->messenger()->addStatus($this->t('The group menu <a href="@url">%label</a> has been update.', $message_arguments));
       $this->logger('group_content_menu')->notice('Updated new group menu %label.', $logger_arguments);
     }
   }

@@ -87,7 +87,7 @@ class GroupContentMenu extends ContentEntityBase implements GroupContentMenuInte
     foreach ($entities as $entity) {
       /** @var \Drupal\Core\Menu\MenuLinkManagerInterface $menu_link_manager */
       $menu_link_manager = \Drupal::service('plugin.manager.menu.link');
-      $menu_link_manager->deleteLinksInMenu('group-menu-' . $entity->id());
+      $menu_link_manager->deleteLinksInMenu(GroupContentMenuInterface::MENU_PREFIX . $entity->id());
 
     }
   }

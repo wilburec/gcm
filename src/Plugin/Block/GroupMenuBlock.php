@@ -265,7 +265,7 @@ class GroupMenuBlock extends BlockBase implements ContainerFactoryPluginInterfac
     }
     $instance = $this->getMenuInstance();
     if ($instance) {
-      $this->menuName = 'group-menu-' . $instance->id();
+      $this->menuName = GroupContentMenuInterface::MENU_PREFIX . $instance->id();
     }
     return $this->menuName;
   }

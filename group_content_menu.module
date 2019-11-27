@@ -15,6 +15,7 @@ use Drupal\group\Entity\GroupContentInterface;
 use Drupal\group\Entity\GroupInterface;
 use Drupal\group\Entity\GroupType;
 use Drupal\group_content_menu\Entity\GroupContentMenuType;
+use Drupal\group_content_menu\GroupContentMenuInterface;
 use Drupal\node\Entity\NodeType;
 use Drupal\system\Entity\Menu;
 use Drupal\system\MenuInterface;
@@ -107,7 +108,7 @@ function group_content_menu_form_node_form_alter(&$form, FormStateInterface $for
   if ($groups) {
     foreach ($groups as $group) {
       $menu_names = array_map(static function (GroupContentInterface $group_content) {
-        return ['group-menu-' . $group_content->getEntity()->id() => $group_content->getEntity()->label()];
+        return [GroupContentMenuInterface::MENU_PREFIX . $group_content->getEntity()->id() => $group_content->getEntity()->label()];
       }, group_content_menu_get_menus_per_group($group));
       $group_menus[] = $menu_names;
     }
@@ -154,7 +155,7 @@ function group_content_menu_group_insert(EntityInterface $entity) {
     // Add menu link for group if enabled.
     $auto_create_home_link = $group_type_configuration['auto_create_home_link'];
     if ($auto_create_home_link) {
-      $menu_name = 'group-menu-' . $group_menu->id();
+      $menu_name = GroupContentMenuInterface::MENU_PREFIX . $group_menu->id();
       $menu_link = \Drupal::entityTypeManager()->getStorage('menu_link_content')->create([
         'title' => $group_type_configuration['auto_create_home_link_title'],
         'link' => [

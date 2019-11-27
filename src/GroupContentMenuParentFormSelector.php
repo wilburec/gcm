@@ -22,7 +22,7 @@ class GroupContentMenuParentFormSelector extends MenuParentFormSelector {
    * {@inheritdoc}
    */
   public function parentSelectElement($menu_parent, $id = '', array $menus = NULL) {
-    if (strpos($menu_parent, 'group-menu-') !== FALSE) {
+    if (strpos($menu_parent, GroupContentMenuInterface::MENU_PREFIX) !== FALSE) {
       $this->isGroupMenu = TRUE;
     }
     return parent::parentSelectElement($menu_parent, $id, $menus);
@@ -43,7 +43,7 @@ class GroupContentMenuParentFormSelector extends MenuParentFormSelector {
     /** @var \Drupal\system\MenuInterface[] $menus */
     foreach ($menus as $menu) {
       if ($this->isGroupMenu) {
-        $options['group-menu-' . $menu->id()] = $menu->label();
+        $options[GroupContentMenuInterface::MENU_PREFIX . $menu->id()] = $menu->label();
       }
       else {
         $options[$menu->id()] = $menu->label();
