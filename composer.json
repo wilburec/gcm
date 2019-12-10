@@ -15,5 +15,8 @@
   "support": {
     "issues": "https://www.drupal.org/project/issues/group_content_menu",
     "source": "http://cgit.drupalcode.org/group_content_menu"
+  },
+  "require": {
+    "drupal/group": "@dev"
   }
 }
