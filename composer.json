@@ -14,7 +14,7 @@
   ],
   "support": {
     "issues": "https://www.drupal.org/project/issues/group_content_menu",
-    "source": "http://cgit.drupalcode.org/group_content_menu"
+    "source": "https://git.drupalcode.org/project/group_content_menu"
   },
   "require": {
     "drupal/group": "^1.0@RC"
