@@ -17,6 +17,6 @@
     "source": "http://cgit.drupalcode.org/group_content_menu"
   },
   "require": {
-    "drupal/group": "@dev"
+    "drupal/group": "^1.0@RC"
   }
 }
