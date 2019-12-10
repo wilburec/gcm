@@ -209,7 +209,10 @@ class GroupMenuBlock extends BlockBase implements ContainerFactoryPluginInterfac
    */
   public function getCacheTags() {
     $tags = parent::getCacheTags();
-    return Cache::mergeTags($tags, [$this->getMenuName()]);
+    if($menu_name = $this->getMenuName()) {
+      return Cache::mergeTags($tags, [$menu_name]);
+    }
+    return $tags;
   }
 
   /**
