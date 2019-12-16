@@ -47,7 +47,7 @@ class GroupContentMenu extends GroupContentEnablerBase {
       $route_params = ['group' => $group->id(), 'plugin_id' => $plugin_id];
       $operations["group-content-menu-create-$type"] = [
         'title' => $this->t('Add @type', ['@type' => $this->getMenuType()->label()]),
-        'url' => new Url('entity.group_content.create_form', $route_params),
+        'url' => new Url('entity.group_content_menu.add_form', $route_params),
         'weight' => 30,
       ];
     }
