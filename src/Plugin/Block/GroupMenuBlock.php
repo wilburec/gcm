@@ -21,7 +21,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  *   category = @Translation("Group Menus"),
  *   deriver = "Drupal\group_content_menu\Plugin\Derivative\GroupMenuBlock",
  *   context = {
- *     "group" = @ContextDefinition("entity", label = @Translation("Group"))
+ *     "group" = @ContextDefinition("entity:group", required = FALSE)
  *   }
  * )
  */
@@ -245,6 +245,9 @@ class GroupMenuBlock extends BlockBase implements ContainerFactoryPluginInterfac
    */
   public function getMenuInstance() {
     $entity = $this->getContext('group')->getContextData()->getValue();
+    if (!$entity) {
+      return NULL;
+    }
     $instances = $this->entityTypeManager->getStorage('group_content')->loadByGroup($entity, $this->getPluginId());
     if ($instances) {
       return array_pop($instances)->getEntity();
