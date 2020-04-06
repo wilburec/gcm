@@ -129,16 +129,17 @@ class GroupContentMenuController extends GroupContentController {
    * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
    */
   protected function handleOneMenuLimitation(GroupInterface $group, $plugin_id) {
-    $group_contents = \Drupal::entityTypeManager()->getStorage('group_content')->loadByGroup($group, $plugin_id);
-    $group_content = reset($group_contents);
-    if ($menu_type = $this->entityTypeManager->getStorage('group_content_menu_type')->load($group_content->getEntity()->bundle())) {
-      $this->messenger()->addError($this->t('This group already has a menu "%menu" of type "%type". Only one menu per type per group is allowed.', [
-        '%menu' => $group_content->getEntity()->label(),
-        '%type' => $menu_type->label(),
-      ]));
-      $route_params = ['group' => $group_content->getGroup()->id()];
-      $url = Url::fromRoute('entity.group_content_menu.collection', $route_params, ['absolute' => TRUE]);
-      return new RedirectResponse($url->toString());
+    if ($group_contents = $this->entityTypeManager->getStorage('group_content')->loadByGroup($group, $plugin_id)) {
+      $group_content = reset($group_contents);
+      if ($menu_type = $this->entityTypeManager->getStorage('group_content_menu_type')->load($group_content->getEntity()->bundle())) {
+        $this->messenger()->addError($this->t('This group already has a menu "%menu" of type "%type". Only one menu per type per group is allowed.', [
+          '%menu' => $group_content->getEntity()->label(),
+          '%type' => $menu_type->label(),
+        ]));
+        $route_params = ['group' => $group_content->getGroup()->id()];
+        $url = Url::fromRoute('entity.group_content_menu.collection', $route_params, ['absolute' => TRUE]);
+        return new RedirectResponse($url->toString());
+      }
     }
     return FALSE;
   }
