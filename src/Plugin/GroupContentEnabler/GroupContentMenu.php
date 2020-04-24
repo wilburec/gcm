@@ -39,16 +39,13 @@ class GroupContentMenu extends GroupContentEnablerBase {
    */
   public function getGroupOperations(GroupInterface $group) {
     $account = \Drupal::currentUser();
-    $plugin_id = $this->getPluginId();
-    $type = $this->getEntityBundle();
     $operations = [];
-
-    if ($group->hasPermission("create $plugin_id entity", $account)) {
-      $route_params = ['group' => $group->id(), 'plugin_id' => $plugin_id];
-      $operations["group-content-menu-create-$type"] = [
-        'title' => $this->t('Add @type', ['@type' => $this->getMenuType()->label()]),
-        'url' => new Url('entity.group_content_menu.add_form', $route_params),
-        'weight' => 30,
+    $url = Url::fromRoute('entity.group_content_menu.collection', ['group' => $group->id()]);
+    if ($url->access($account)) {
+      $operations['group-content-menu-collection'] = [
+        'title' => $this->t('Edit group menus'),
+        'url' => $url,
+        'weight' => 100,
       ];
     }
     return $operations;
