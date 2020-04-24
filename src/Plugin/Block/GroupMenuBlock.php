@@ -20,7 +20,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  *   admin_label = @Translation("Group Menu"),
  *   category = @Translation("Group Menus"),
  *   deriver = "Drupal\group_content_menu\Plugin\Derivative\GroupMenuBlock",
- *   context = {
+ *   context_definitions = {
  *     "group" = @ContextDefinition("entity:group", required = FALSE)
  *   }
  * )
@@ -245,7 +245,8 @@ class GroupMenuBlock extends BlockBase implements ContainerFactoryPluginInterfac
    */
   public function getMenuInstance() {
     $entity = $this->getContext('group')->getContextData()->getValue();
-    if (!$entity) {
+    // Don't load menu for group entities that are new/unsaved.
+    if (!$entity || $entity->isNew()) {
       return NULL;
     }
     $instances = $this->entityTypeManager->getStorage('group_content')->loadByGroup($entity, $this->getPluginId());
