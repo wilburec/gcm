@@ -9,8 +9,6 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
  * Provides block plugin definitions for custom menus.
- *
- * @see \Drupal\system\Plugin\Block\SystemMenuBlock
  */
 class GroupMenuBlock extends DeriverBase implements ContainerDeriverInterface {
 

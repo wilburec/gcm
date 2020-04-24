@@ -66,6 +66,9 @@ class GroupContentMenuType extends ConfigEntityBundleBase {
     parent::postCreate($storage);
     \Drupal::service('plugin.manager.group_content_enabler')->clearCachedDefinitions();
     \Drupal::service('router.builder')->rebuild();
+
+    // Invalidate the block cache to update menu-based derivatives.
+    \Drupal::service('plugin.manager.block')->clearCachedDefinitions();
   }
 
 }
