@@ -14,7 +14,7 @@ use Symfony\Component\Routing\Route;
 /**
  * Determines access to routes.
  *
- * Access is based on whether a piece of group content belongs o the group that
+ * Access is based on whether a piece of group content belongs to the group that
  * was also specified in the route.
  */
 class GroupOwnsMenuContentAccessChecker implements AccessInterface {
