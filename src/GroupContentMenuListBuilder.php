@@ -87,7 +87,7 @@ class GroupContentMenuListBuilder extends EntityListBuilder {
    */
   public function buildRow(EntityInterface $entity) {
     /* @var $entity \Drupal\group_content_menu\GroupContentMenuInterface */
-    $row['id'] = $entity->toLink()->toString();
+    $row['id'] = $entity->toLink($entity->label(), 'edit-form')->toString();
     $row['bundle'] = \Drupal::entityTypeManager()->getStorage('group_content_menu_type')->load($entity->bundle())->label();
     return $row + parent::buildRow($entity);
   }

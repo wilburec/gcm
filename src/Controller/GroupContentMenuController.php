@@ -7,6 +7,7 @@ use Drupal\Core\Url;
 use Drupal\group\Entity\Controller\GroupContentController;
 use Drupal\group\Entity\GroupInterface;
 use Drupal\group_content_menu\GroupContentMenuInterface;
+use Drupal\menu_link_content\MenuLinkContentInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 
@@ -28,6 +29,8 @@ class GroupContentMenuController extends GroupContentController {
   public static function create(ContainerInterface $container) {
     $instance = parent::create($container);
     $instance->privateTempStoreFactory = $container->get('tempstore.private');
+    $instance->pluginManager = $container->get('plugin.manager.group_content_enabler');
+    return $instance;
   }
 
   /**
@@ -78,7 +81,7 @@ class GroupContentMenuController extends GroupContentController {
         $description = $this->t('Add new menu of type %bundle_label to the group.', ['%bundle_label' => $bundle_label]);
         $build['#bundles'][$bundle_name]['label'] = $bundle_label;
         $build['#bundles'][$bundle_name]['description'] = $description;
-        $build['#bundles'][$bundle_name]['add_link'] = Link::createFromRoute($label, 'entity.group_content_menu.add_form', ['group' => $group->id(), 'plugin_id' => $plugin_id]);
+        $build['#bundles'][$bundle_name]['add_link'] = Link::createFromRoute($label, 'entity.group_content_menu.add_form', ['group' => $group->id(), 'group_content_menu_type' => $plugin_id]);
       }
     }
 
@@ -166,6 +169,19 @@ class GroupContentMenuController extends GroupContentController {
       'bundle' => 'menu_link_content',
     ]);
     return $this->entityFormBuilder()->getForm($menu_link);
+  }
+
+  /**
+   * Provides the menu link edit form.
+   *
+   * @param \Drupal\menu_link_content\MenuLinkContentInterface $menu_link_content
+   *   The menu link content.
+   *
+   * @return array
+   *   Returns the menu link edit form.
+   */
+  public function editLink(MenuLinkContentInterface $menu_link_content) {
+    return $this->entityFormBuilder()->getForm($menu_link_content);
   }
 
 }

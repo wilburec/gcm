@@ -3,9 +3,11 @@
 namespace Drupal\group_content_menu\Entity;
 
 use Drupal\Core\Entity\ContentEntityBase;
+use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\Core\Entity\EntityStorageInterface;
 use Drupal\Core\Entity\EntityTypeInterface;
 use Drupal\Core\Field\BaseFieldDefinition;
+use Drupal\group\Entity\GroupContent;
 use Drupal\group_content_menu\GroupContentMenuInterface;
 
 /**
@@ -40,10 +42,10 @@ use Drupal\group_content_menu\GroupContentMenuInterface;
  *     "uuid" = "uuid"
  *   },
  *   links = {
- *     "add-form" = "/group/{group}/menu/add/{plugin_id}",
+ *     "add-form" = "/group/{group}/menu/add/{group_content_menu_type}",
  *     "add-page" = "/group/{group}/menu/add",
  *     "add-menu-link" = "/group/{group}/menu/{group_content_menu}/add-link",
- *     "canonical" = "/group/{group}/menu/{group_content_menu}",
+ *     "edit-menu-link" = "/group/{group}/menu/{group_content_menu}/link/{menu_link_content}",
  *     "edit-form" = "/group/{group}/menu/{group_content_menu}/edit",
  *     "delete-form" = "/group/{group}/menu/{group_content_menu}/delete",
  *     "collection" = "/group/{group}/menus"
@@ -83,12 +85,21 @@ class GroupContentMenu extends ContentEntityBase implements GroupContentMenuInte
    * {@inheritdoc}
    */
   public static function preDelete(EntityStorageInterface $storage, array $entities) {
+    /** @var \Drupal\Core\Menu\MenuLinkManagerInterface $menu_link_manager */
+    $menu_link_manager = \Drupal::service('plugin.manager.menu.link');
     /** @var \Drupal\Core\Entity\EntityInterface $entity */
     foreach ($entities as $entity) {
-      /** @var \Drupal\Core\Menu\MenuLinkManagerInterface $menu_link_manager */
-      $menu_link_manager = \Drupal::service('plugin.manager.menu.link');
       $menu_link_manager->deleteLinksInMenu(GroupContentMenuInterface::MENU_PREFIX . $entity->id());
 
+    }
+    // Remove any group contents related to this menu before removing the menu.
+    if ($entity instanceof ContentEntityInterface) {
+      if ($group_contents = GroupContent::loadByEntity($entity)) {
+        /** @var \Drupal\group\Entity\GroupContent $group_content */
+        foreach ($group_contents as $group_content) {
+          $group_content->delete();
+        }
+      }
     }
   }
 
@@ -102,6 +113,7 @@ class GroupContentMenu extends ContentEntityBase implements GroupContentMenuInte
     if ($group_content = reset($group_contents)) {
       // The group is needed as a route parameter.
       $uri_route_parameters['group'] = $group_content->getGroup()->id();
+      $uri_route_parameters['group_content_menu_type'] = $group_content->getEntity()->bundle();
     }
 
     return $uri_route_parameters;

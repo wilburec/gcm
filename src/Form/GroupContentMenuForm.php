@@ -15,6 +15,7 @@ use Drupal\Core\Menu\MenuTreeParameters;
 use Drupal\Core\Render\Element;
 use Drupal\Core\Url;
 use Drupal\Core\Utility\LinkGeneratorInterface;
+use Drupal\group\Entity\GroupInterface;
 use Drupal\group_content_menu\GroupContentMenuInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
@@ -199,7 +200,7 @@ class GroupContentMenuForm extends ContentEntityForm {
       $form['links']['#empty'] = $this->t('There are no menu links yet.');
     }
 
-    $links = $this->buildOverviewTreeForm($tree, $delta);
+    $links = $this->buildOverviewTreeForm($tree, $delta, $group);
     foreach (Element::children($links) as $id) {
       if (isset($links[$id]['#item'])) {
         $element = $links[$id];
@@ -244,7 +245,7 @@ class GroupContentMenuForm extends ContentEntityForm {
   /**
    * Build overview tree form.
    */
-  protected function buildOverviewTreeForm($tree, $delta) {
+  protected function buildOverviewTreeForm($tree, $delta, GroupInterface $group) {
     $form = &$this->overviewTreeForm;
     $tree_access_cacheability = new CacheableMetadata();
     foreach ($tree as $element) {
@@ -300,19 +301,15 @@ class GroupContentMenuForm extends ContentEntityForm {
         $operations['edit'] = [
           'title' => $this->t('Edit'),
         ];
-        // Allow for a custom edit link per plugin.
-        $edit_route = $link->getEditRoute();
-        if ($edit_route) {
-          $operations['edit']['url'] = $edit_route;
-          // Bring the user back to the menu overview.
-          $operations['edit']['query'] = $this->getRedirectDestination()->getAsArray();
-        }
-        else {
-          // Fall back to the standard edit link.
-          $operations['edit'] += [
-            'url' => Url::fromRoute('menu_ui.link_edit', ['menu_link_plugin' => $link->getPluginId()]),
-          ];
-        }
+        // Use this module's edit route for the menu. This means we don't have
+        // to give elevated menu_ui access to edit menu links.
+        $operations['edit']['url'] = Url::fromRoute('entity.group_content_menu.edit_link', [
+          'group' => $group->id(),
+          'group_content_menu' => $this->entity->id(),
+          'menu_link_content' => $link->getMetaData()['entity_id'],
+        ]);
+        // Bring the user back to the menu overview.
+        $operations['edit']['query'] = ['destination' => Url::fromRouteMatch($this->getRouteMatch())->toString()];
         // Links can either be reset or deleted, not both.
         if ($link->isResettable()) {
           $operations['reset'] = [

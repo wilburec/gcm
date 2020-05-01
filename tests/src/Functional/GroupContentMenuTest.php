@@ -3,6 +3,7 @@
 namespace Drupal\Tests\group_content_menu\Functional;
 
 use Drupal\Core\Url;
+use Drupal\group\Entity\GroupType;
 use Drupal\Tests\group\Functional\GroupBrowserTestBase;
 
 /**
@@ -20,6 +21,22 @@ class GroupContentMenuTest extends GroupBrowserTestBase {
     'group_content_menu',
     'menu_ui',
   ];
+
+  /**
+   * {@inheritdoc}
+   */
+  protected function setUp(): void {
+    parent::setUp();
+
+    // Add group permissions.
+    $role = GroupType::load('default')->getMemberRole();
+    $role->grantPermissions([
+      'access group content menu overview',
+      'create group_content_menu:group_menu content',
+      'manage group_content_menu',
+    ]);
+    $role->save();
+  }
 
   /**
    * Test creation of a group content menu.
@@ -72,11 +89,38 @@ class GroupContentMenuTest extends GroupBrowserTestBase {
 
     // Add a group and group content menu.
     $this->drupalGet('/group/add/default');
-    $title = $this->randomString();
-    $page->fillField('label[0][value]', $title);
+    $group_title = $this->randomString();
+    $page->fillField('label[0][value]', $group_title);
     $page->pressButton('Create Default label and complete your membership');
     $page->pressButton('Save group and membership');
     $assert->linkExists('Group home page');
+
+    // Add a menu link to the newly created menu, then edit it.
+    $this->drupalGet('/group/1/menu/1/edit');
+    $assert->statusCodeEquals(200);
+    $this->drupalGet('/group/1/menu/1/add-link');
+    $assert->statusCodeEquals(200);
+    $link_title = $this->randomString();
+    $page->fillField('title[0][value]', $link_title);
+    $page->fillField('link[0][uri]', '<front>');
+    $page->pressButton('Save');
+    $this->drupalGet('/group/1/menu/1/link/2');
+    $page->pressButton('Save');
+    $assert->pageTextContains('The menu link has been saved. ');
+    $this->drupalGet('/group/1');
+    $assert->linkExists($link_title);
+
+    // Delete menu.
+    $this->drupalGet('/group/1/menu/1/delete');
+    $page->pressButton('Delete');
+    $assert->pageTextContains('The group content menu Group Menu has been deleted.');
+
+    // Re-add menu.
+    $this->drupalGet('/group/1/content/create/group_content_menu:group_menu');
+    $menu_title = $this->randomString();
+    $page->fillField('label[0][value]', $menu_title);
+    $page->pressButton('Save');
+    $assert->pageTextContains("New group menu $menu_title has been created. ");
   }
 
   /**

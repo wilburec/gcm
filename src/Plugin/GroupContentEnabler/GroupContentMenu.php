@@ -118,10 +118,40 @@ class GroupContentMenu extends GroupContentEnablerBase {
   /**
    * {@inheritdoc}
    */
+  protected function getGroupContentPermissions() {
+    $plugin_id = $this->getPluginId();
+
+    $permissions["create $plugin_id content"] = [
+        'title' => 'Relate menu',
+        'description' => 'Allows you to relate a menu to the group.',
+      ];
+    return $permissions;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  protected function getTargetEntityPermissions() {
+    // No special permissions.
+    return [];
+  }
+
+  /**
+   * {@inheritdoc}
+   */
   public function calculateDependencies() {
     $dependencies = parent::calculateDependencies();
     $dependencies['config'][] = 'group_content_menu.group_content_menu_type.' . $this->getEntityBundle();
     return $dependencies;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function postInstall() {
+    parent::postInstall();
+    // Rebuild route access to pick up new create menu route permissions.
+    \Drupal::service("router.builder")->rebuild();
   }
 
 }

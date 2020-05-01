@@ -22,6 +22,9 @@ class GroupContentMenuRouteProvider extends DefaultHtmlRouteProvider {
     if ($add_menu_link = $this->getAddMenuLink($entity_type)) {
       $collection->add('entity.group_content_menu.add_link', $add_menu_link);
     }
+    if ($add_menu_link = $this->getEditMenuLink($entity_type)) {
+      $collection->add('entity.group_content_menu.edit_link', $add_menu_link);
+    }
 
     return $collection;
   }
@@ -54,6 +57,34 @@ class GroupContentMenuRouteProvider extends DefaultHtmlRouteProvider {
   }
 
   /**
+   * Gets the edit-menu-link route.
+   *
+   * @param \Drupal\Core\Entity\EntityTypeInterface $entity_type
+   *   The entity type.
+   *
+   * @return \Symfony\Component\Routing\Route|null
+   *   The generated route, if available.
+   */
+  protected function getEditMenuLink(EntityTypeInterface $entity_type) {
+    if ($entity_type->hasLinkTemplate('edit-menu-link')) {
+      $route = new Route($entity_type->getLinkTemplate('edit-menu-link'));
+      return $route
+        ->setDefaults([
+          '_title' => 'Edit menu link',
+          '_controller' => sprintf('%s::editLink', GroupContentMenuController::class),
+        ])
+        ->setRequirement('_group_permission', 'manage group_content_menu')
+        ->setRequirement('_group_installed_content', implode('+', $this->getPluginIds()))
+        ->setOption('parameters', [
+          'group' => ['type' => 'entity:group'],
+          'group_content_menu' => ['type' => 'entity:group_content_menu'],
+          'menu_link_content' => ['type' => 'entity:menu_link_content'],
+        ])
+        ->setOption('_group_operation_route', TRUE);
+    }
+  }
+
+  /**
    * {@inheritdoc}
    */
   protected function getAddPageRoute(EntityTypeInterface $entity_type) {
@@ -63,7 +94,7 @@ class GroupContentMenuRouteProvider extends DefaultHtmlRouteProvider {
           '_title' => 'Add new menu',
           '_controller' => sprintf('%s::addPage', GroupContentMenuController::class),
         ])
-        ->setRequirement('_group_permission', implode('+', $this->getCreatePermissions()))
+        ->setRequirement('_group_permission', 'manage group_content_menu')
         ->setRequirement('_group_installed_content', implode('+', $this->getPluginIds()))
         ->setOption('_group_operation_route', TRUE);
     }
@@ -80,7 +111,7 @@ class GroupContentMenuRouteProvider extends DefaultHtmlRouteProvider {
       return $route
         ->setDefault('_title', 'Add new menu')
         ->setDefault('_controller', sprintf('%s::createForm', GroupContentMenuController::class))
-        ->setRequirement('_group_permission', "create group_content_menu:{$entity_type->id()} entity")
+        ->setRequirement('_group_permission', 'manage group_content_menu')
         ->setRequirement('_group_installed_content', implode('+', $this->getPluginIds()))
         ->setOption('_group_operation_route', TRUE);
     }
@@ -143,7 +174,7 @@ class GroupContentMenuRouteProvider extends DefaultHtmlRouteProvider {
       $route->setRequirements($requirements);
       return $route
         ->setRequirement('_group_menu_owns_content', 'TRUE')
-        ->setRequirement('_group_permission', "update own group_content_menu:{$entity_type->id()} entity")
+        ->setRequirement('_group_permission', 'manage group_content_menu')
         ->setOption('_group_operation_route', TRUE)
         ->setOption('parameters', [
           'group' => ['type' => 'entity:group'],
@@ -162,14 +193,13 @@ class GroupContentMenuRouteProvider extends DefaultHtmlRouteProvider {
       $route->setRequirements($requirements);
       return $route
         ->setRequirement('_group_menu_owns_content', 'TRUE')
-        ->setRequirement('_group_permission', "delete own group_content_menu:{$entity_type->id()} entity")
+        ->setRequirement('_group_permission', 'manage group_content_menu')
         ->setOption('_group_operation_route', TRUE)
         ->setOption('parameters', [
           'group' => ['type' => 'entity:group'],
           'group_content_menu' => ['type' => 'entity:group_content_menu'],
         ]);
     }
-
   }
 
   /**
@@ -181,7 +211,7 @@ class GroupContentMenuRouteProvider extends DefaultHtmlRouteProvider {
   protected function getCreatePermissions() {
     $permissions = [];
     foreach (array_keys(GroupContentMenuType::loadMultiple()) as $entity_type_id) {
-      $permissions[] = "create group_content_menu:$entity_type_id entity";
+      $permissions[] = "create group_content_menu:$entity_type_id content";
     }
     return $permissions ?: ['access group content menu overview'];
   }
