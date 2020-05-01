@@ -188,8 +188,7 @@ class GroupMenuBlock extends BlockBase implements ContainerFactoryPluginInterfac
 
     }
     if ($menu_instance) {
-      $menu_name = $menu_instance->id();
-      $build['#theme'] = 'menu__group__' . strtr($menu_name, '-', '_');
+      $build['#theme'] = 'menu__group_menu';
     }
     return $build;
   }

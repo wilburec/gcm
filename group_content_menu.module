@@ -30,6 +30,10 @@ function group_content_menu_theme() {
     'group_content_menu' => [
       'render element' => 'elements',
     ],
+    'menu__group_menu' => [
+      'base hook' => 'menu',
+      'variables' => ['items' => [], 'attributes' => []],
+    ],
   ];
 }
 
