@@ -359,32 +359,19 @@ class GroupContentMenuForm extends ContentEntityForm {
    */
   public function save(array $form, FormStateInterface $form_state) {
     $menu = $this->getEntity();
-    $group = $form_state->get('group');
     if (!$menu->isNew()) {
       $this->submitOverviewForm($form, $form_state);
     }
     $status = $menu->save();
-    if ($status === SAVED_NEW) {
-      $plugin = $group->getGroupType()->getContentPlugin($form_state->get('group_content_enabler'));
-      $group_content = \Drupal::entityTypeManager()->getStorage('group_content')->create([
-        'type' => $plugin->getContentTypeConfigId(),
-        'gid' => $group->id(),
-        'label' => $form_state->getValue('label'),
-        'entity_id' => $menu,
-      ]);
-      $group_content->save();
-    }
-
-    $logger_arguments = ['%label' => $this->entity->label()];
-    $message_arguments = $logger_arguments + ['@url' => $menu->toUrl('edit-form')->toString()];
+    $arguments = ['%label' => $this->entity->label()];
 
     if ($status === SAVED_NEW) {
-      $this->messenger()->addStatus($this->t('New group menu <a href="@url">%label</a> has been created.', $message_arguments));
-      $this->logger('group_content_menu')->notice('Created new group menu %label', $logger_arguments);
+      $this->messenger()->addStatus($this->t('New group menu <em>%label</em> has been created.', $arguments));
+      $this->logger('group_content_menu')->notice('Created new group menu %label', $arguments);
     }
     else {
-      $this->messenger()->addStatus($this->t('The group menu <a href="@url">%label</a> has been update.', $message_arguments));
-      $this->logger('group_content_menu')->notice('Updated new group menu %label.', $logger_arguments);
+      $this->messenger()->addStatus($this->t('The group menu <em>%label</em> has been update.', $arguments));
+      $this->logger('group_content_menu')->notice('Updated new group menu %label.', $arguments);
     }
   }
 
