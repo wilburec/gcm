@@ -42,7 +42,7 @@ use Drupal\group_content_menu\GroupContentMenuInterface;
  *     "uuid" = "uuid"
  *   },
  *   links = {
- *     "add-form" = "/group/{group}/menu/add/{group_content_menu_type}",
+ *     "add-form" = "/group/{group}/menu/add/{plugin_id}",
  *     "add-page" = "/group/{group}/menu/add",
  *     "add-menu-link" = "/group/{group}/menu/{group_content_menu}/add-link",
  *     "edit-menu-link" = "/group/{group}/menu/{group_content_menu}/link/{menu_link_content}",
