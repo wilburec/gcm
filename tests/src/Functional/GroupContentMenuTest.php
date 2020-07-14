@@ -95,6 +95,12 @@ class GroupContentMenuTest extends GroupBrowserTestBase {
     $page->pressButton('Save group and membership');
     $assert->linkExists('Group home page');
 
+    // Home link is editable.
+    $this->drupalGet('/group/1/menu/1/link/1');
+    $assert->statusCodeEquals(200);
+    $page->pressButton('Save');
+    $assert->pageTextContains('The menu link has been saved.');
+
     // Add a menu link to the newly created menu, then edit it.
     $this->drupalGet('/group/1/menu/1/edit');
     $assert->statusCodeEquals(200);

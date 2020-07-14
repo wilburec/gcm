@@ -243,7 +243,6 @@ function group_content_menu_group_insert(EntityInterface $entity) {
           'uri' => 'internal:/group/' . $entity->id(),
         ],
         'menu_name' => $menu_name,
-        'bundle' => $menu_name,
       ]);
       $menu_link->save();
     }
