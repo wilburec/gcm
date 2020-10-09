@@ -319,7 +319,7 @@ class GroupContentMenuForm extends ContentEntityForm {
       }
 
       if ($element->subtree) {
-        $this->buildOverviewTreeForm($element->subtree, $delta);
+        $this->buildOverviewTreeForm($element->subtree, $delta, $group);
       }
     }
 

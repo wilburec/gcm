@@ -50,7 +50,7 @@ class GroupContentMenuTest extends GroupBrowserTestBase {
   /**
    * Test creation of a group content menu with group nodes.
    */
-  public function testGroupContentMenuNode() {
+  public function testNodeGroupContentMenu() {
     /** @var \Drupal\Tests\WebAssert $assert */
     $assert = $this->assertSession();
     /** @var \Behat\Mink\Element\DocumentElement $page */
@@ -93,7 +93,7 @@ class GroupContentMenuTest extends GroupBrowserTestBase {
   /**
    * Test creation of a group content menu.
    */
-  public function testGroupContentMenu() {
+  public function testCreateGroupContentMenu() {
     /** @var \Drupal\Tests\WebAssert $assert */
     $assert = $this->assertSession();
     /** @var \Behat\Mink\Element\DocumentElement $page */
@@ -153,20 +153,25 @@ class GroupContentMenuTest extends GroupBrowserTestBase {
     $page->pressButton('Save');
     $assert->pageTextContains('The menu link has been saved.');
 
-    // Add a menu link to the newly created menu, then edit it.
+    // Add menu links to the newly created menu and render the menu.
     $this->drupalGet('/group/1/menu/1/edit');
     $assert->statusCodeEquals(200);
     $this->drupalGet('/group/1/menu/1/add-link');
     $assert->statusCodeEquals(200);
+    // Add a link.
     $link_title = $this->randomString();
     $page->fillField('title[0][value]', $link_title);
     $page->fillField('link[0][uri]', '<front>');
     $page->pressButton('Save');
+    // Edit the link
     $this->drupalGet('/group/1/menu/1/link/2');
+    $page->selectFieldOption('menu_parent', '-- Group home page');
     $page->pressButton('Save');
     $assert->pageTextContains('The menu link has been saved. ');
     $this->drupalGet('/group/1');
     $assert->linkExists($link_title);
+    $this->drupalGet('/group/1/menu/1/edit');
+    $assert->statusCodeEquals(200);
 
     // Delete menu.
     $this->drupalGet('/group/1/menu/1/delete');
