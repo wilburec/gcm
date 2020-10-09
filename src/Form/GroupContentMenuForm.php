@@ -5,16 +5,12 @@ namespace Drupal\group_content_menu\Form;
 use Drupal\Component\Utility\NestedArray;
 use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\Entity\ContentEntityForm;
-use Drupal\Core\Entity\EntityRepositoryInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Link;
-use Drupal\Core\Menu\MenuLinkManagerInterface;
 use Drupal\Core\Menu\MenuLinkTreeElement;
-use Drupal\Core\Menu\MenuLinkTreeInterface;
 use Drupal\Core\Menu\MenuTreeParameters;
 use Drupal\Core\Render\Element;
 use Drupal\Core\Url;
-use Drupal\Core\Utility\LinkGeneratorInterface;
 use Drupal\group\Entity\GroupInterface;
 use Drupal\group_content_menu\GroupContentMenuInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -62,34 +58,14 @@ class GroupContentMenuForm extends ContentEntityForm {
   protected $entity;
 
   /**
-   * Constructs a MenuForm object.
-   *
-   * @param \Drupal\Core\Entity\EntityRepositoryInterface $entity_repository
-   *   The entity repository service.
-   * @param \Drupal\Core\Menu\MenuLinkManagerInterface $menu_link_manager
-   *   The menu link manager.
-   * @param \Drupal\Core\Menu\MenuLinkTreeInterface $menu_tree
-   *   The menu tree service.
-   * @param \Drupal\Core\Utility\LinkGeneratorInterface $link_generator
-   *   The link generator.
-   */
-  public function __construct(EntityRepositoryInterface $entity_repository, MenuLinkManagerInterface $menu_link_manager, MenuLinkTreeInterface $menu_tree, LinkGeneratorInterface $link_generator) {
-    parent::__construct($entity_repository);
-    $this->menuLinkManager = $menu_link_manager;
-    $this->menuTree = $menu_tree;
-    $this->linkGenerator = $link_generator;
-  }
-
-  /**
    * {@inheritdoc}
    */
   public static function create(ContainerInterface $container) {
-    return new static(
-      $container->get('entity.repository'),
-      $container->get('plugin.manager.menu.link'),
-      $container->get('menu.link_tree'),
-      $container->get('link_generator')
-    );
+    $instance = parent::create($container);
+    $instance->menuLinkManager = $container->get('plugin.manager.menu.link');
+    $instance->menuTree = $container->get('menu.link_tree');
+    $instance->linkGenerator = $container->get('link_generator');
+    return $instance;
   }
 
   /**

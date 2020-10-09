@@ -64,6 +64,29 @@ class GroupContentMenuType extends ConfigEntityBundleBase {
    */
   public function postCreate(EntityStorageInterface $storage) {
     parent::postCreate($storage);
+    static::clearCacheOnSave();
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function postSave(EntityStorageInterface $storage, $update = TRUE) {
+    parent::postSave($storage, $update);
+    static::clearCacheOnSave();
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function postDelete(EntityStorageInterface $storage, array $entities) {
+    parent::postDelete($storage, $entities);
+    static::clearCacheOnSave();
+  }
+
+    /**
+     * Clear cache after group menu types are adjusted.
+     */
+  protected static function clearCacheOnSave() {
     \Drupal::service('plugin.manager.group_content_enabler')->clearCachedDefinitions();
     \Drupal::service('router.builder')->rebuild();
 

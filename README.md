@@ -30,9 +30,3 @@ Note: Use of the module on a Composer managed site is also supported.
 
 1. Enable these the type on the group content enablement tab i.e.
   /admin/group/types/manage/{group_type}/content.
-
-
-### Automatic Updates Initiative
-
-- Follow and read up on
-  [Ideas queue - Automatic Updates initiative](https://www.drupal.org/project/ideas/issues/2940731)
