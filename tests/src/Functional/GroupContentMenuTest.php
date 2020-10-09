@@ -39,12 +39,22 @@ class GroupContentMenuTest extends GroupBrowserTestBase {
     ]);
     $role->save();
 
-    // Create a basic page content type.
-    $this->drupalCreateContentType([
+    // Create a basic page content type with a default menu.
+    $type = $this->drupalCreateContentType([
       'type' => 'page',
       'name' => 'Basic page',
       'display_submitted' => FALSE,
     ]);
+    $type->setThirdPartySetting('menu_ui', 'available_menus', ['main']);
+    $type->save();
+    // Create an article content type, without any default menu.
+    $type = $this->drupalCreateContentType([
+      'type' => 'article',
+      'name' => 'Article',
+      'display_submitted' => FALSE,
+    ]);
+    $type->setThirdPartySetting('menu_ui', 'available_menus', []);
+    $type->save();
   }
 
   /**
@@ -84,17 +94,53 @@ class GroupContentMenuTest extends GroupBrowserTestBase {
     $page->pressButton('Install plugin');
     $assert->pageTextContains('The content plugin was installed on the group type.');
 
+    // Enable the gnode content plugin for article.
+    $this->drupalGet('/admin/group/content/install/default/group_node:article');
+    $page->pressButton('Install plugin');
+    $assert->pageTextContains('The content plugin was installed on the group type.');
+
     // Enable the group content plugin.
     $this->drupalGet('/admin/group/content/install/default/group_content_menu:group_menu');
     $page->pressButton('Install plugin');
     $assert->pageTextContains('The content plugin was installed on the group type.');
 
-    // Verify the node edit form works, even when no menu has been created yet.
+    // Verify the menu settings render even when no group menu has been created.
     $this->drupalGet('/group/1/content/create/group_node:page');
+    $assert->pageTextContains('Menu settings');
+    $assert->pageTextContains('Parent item');
     $page->fillField('title[0][value]', 'Group node');
     $page->pressButton('Save');
     $this->drupalGet('/node/1/edit');
     $assert->statusCodeEquals(200);
+
+    // Verify the menu settings do not display if no menus are available.
+    $this->drupalGet('/group/1/content/create/group_node:article');
+    $assert->pageTextNotContains('Menu settings');
+
+    // Create new group content menu.
+    $this->drupalGet('/group/1/menu/add');
+    $menu_label = $this->randomString();
+    $page->fillField('label[0][value]', $menu_label);
+    $page->pressButton('Save');
+
+    // Only one group content menu instance is created.
+    $this->drupalGet('/group/1/content');
+    $assert->pageTextContainsOnce($menu_label);
+
+    // Verify menu settings render when a group menu has been created.
+    $this->drupalGet('/group/1/content/create/group_node:page');
+    $assert->pageTextContains('Menu settings');
+    $assert->pageTextContains('Parent item');
+    $assert->optionExists('menu[menu_parent]', $menu_label);
+    $page->fillField('title[0][value]', 'Group node');
+    $page->pressButton('Save');
+    $this->drupalGet('/node/2/edit');
+    $assert->statusCodeEquals(200);
+
+    // Verify the menu settings display, even if no default menu selected.
+    $this->drupalGet('/group/1/content/create/group_node:article');
+    $assert->pageTextContains('Menu settings');
+    $assert->pageTextContains('Parent item');
   }
 
   /**
@@ -294,6 +340,7 @@ class GroupContentMenuTest extends GroupBrowserTestBase {
       'administer blocks',
       'administer group content menu types',
       'administer group',
+      'administer menu',
       'bypass group access',
     ] + parent::getGlobalPermissions();
   }

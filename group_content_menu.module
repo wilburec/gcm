@@ -134,14 +134,7 @@ function group_content_menu_form_node_form_alter(&$form, FormStateInterface $for
       $defaults = group_content_menu_get_menu_link_default($node, array_keys($group_menus));
       $default = $defaults['menu_name'] . ':' . $defaults['parent'];
     }
-    /** @var \Drupal\Core\Menu\MenuParentFormSelectorInterface $menu_parent_selector */
-    $menu_parent_selector = \Drupal::service('menu.parent_form_selector');
-    $parent_element = $menu_parent_selector->parentSelectElement($default, $defaults['id'], array_merge($group_menus, $menu_ui_menus));
-    $form['menu']['link']['menu_parent'] = $parent_element;
 
-    if (!$defaults['id']) {
-      return;
-    }
     $form['menu'] = [
       '#type' => 'details',
       '#title' => t('Menu settings'),
@@ -169,6 +162,11 @@ function group_content_menu_form_node_form_alter(&$form, FormStateInterface $for
         ],
       ],
     ];
+
+    /** @var \Drupal\Core\Menu\MenuParentFormSelectorInterface $menu_parent_selector */
+    $menu_parent_selector = \Drupal::service('menu.parent_form_selector');
+    $parent_element = $menu_parent_selector->parentSelectElement($default, $defaults['id'], array_merge($group_menus, $menu_ui_menus));
+    $form['menu']['link']['menu_parent'] = $parent_element;
 
     // Populate the element with the link data.
     foreach (['id', 'entity_id'] as $key) {
@@ -204,6 +202,11 @@ function group_content_menu_form_node_form_alter(&$form, FormStateInterface $for
       if ($action !== 'preview' && isset($form['actions'][$action]['#type']) && $form['actions'][$action]['#type'] === 'submit') {
         $form['actions'][$action]['#submit'][] = 'menu_ui_form_node_form_submit';
       }
+    }
+
+    // If no parent menus exist, don't render the menu settings.
+    if (empty($form['menu']['link']['menu_parent']['#options'])) {
+      $form['menu']['#access'] = FALSE;
     }
 
     $form['#entity_builders'][] = 'menu_ui_node_builder';
@@ -309,6 +312,8 @@ function group_content_menu_get_plugins_per_group(GroupInterface $group) {
  *
  * @param \Drupal\node\NodeInterface $node
  *   The node entity.
+ * @param array $menu_names
+ *   The menu names.
  *
  * @return array
  *   An array that contains default values for the menu link form.
@@ -317,7 +322,17 @@ function group_content_menu_get_menu_link_default(NodeInterface $node, array $me
   /** @var \Drupal\node\NodeTypeInterface $node_type */
   $node_type = $node->type->entity;
   $menu_name = strtok($node_type->getThirdPartySetting('menu_ui', 'parent', 'main:'), ':');
-  $defaults = ['id' => '', 'menu_name' => $menu_name, 'parent' => ''];
+  $defaults = [
+    'entity_id' => 0,
+    'id' => '',
+    'title' => '',
+    'title_max_length' => 128,
+    'description' => '',
+    'description_max_length' => 128,
+    'menu_name' => $menu_name,
+    'parent' => '',
+    'weight' => 0,
+  ];
   if (empty($menu_names)) {
     // No menu is yet available.
     return $defaults;
@@ -330,7 +345,7 @@ function group_content_menu_get_menu_link_default(NodeInterface $node, array $me
       ->range(0, 1);
     $result = $query->execute();
 
-    $id = (!empty($result)) ? reset($result) : FALSE;
+    $id = !empty($result) ? reset($result) : FALSE;
     if ($id) {
       $menu_link = MenuLinkContent::load($id);
       $menu_link = \Drupal::service('entity.repository')->getTranslationFromContext($menu_link);
