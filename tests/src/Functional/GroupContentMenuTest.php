@@ -19,7 +19,9 @@ class GroupContentMenuTest extends GroupBrowserTestBase {
   public static $modules = [
     'block',
     'group_content_menu',
+    'gnode',
     'menu_ui',
+    'node',
   ];
 
   /**
@@ -36,6 +38,56 @@ class GroupContentMenuTest extends GroupBrowserTestBase {
       'manage group_content_menu',
     ]);
     $role->save();
+
+    // Create a basic page content type.
+    $this->drupalCreateContentType([
+      'type' => 'page',
+      'name' => 'Basic page',
+      'display_submitted' => FALSE,
+    ]);
+  }
+
+  /**
+   * Test creation of a group content menu with group nodes.
+   */
+  public function testGroupContentMenuNode() {
+    /** @var \Drupal\Tests\WebAssert $assert */
+    $assert = $this->assertSession();
+    /** @var \Behat\Mink\Element\DocumentElement $page */
+    $page = $this->getSession()->getPage();
+
+    // Generate a group content menu type.
+    $this->drupalGet('admin/structure/group_content_menu_types');
+    $page->clickLink('Add group menu type');
+    $assert->statusCodeEquals(200);
+    $page->fillField('label', 'Group Menu');
+    $page->fillField('id', 'group_menu');
+    $page->pressButton('Save');
+    $assert->statusCodeEquals(200);
+    $assert->pageTextContains('The group menu type Group Menu has been added.');
+
+    // Enable the gnode content plugin for basic page.
+    $this->drupalGet('/admin/group/content/install/default/group_node:page');
+    $page->pressButton('Install plugin');
+    $assert->pageTextContains('The content plugin was installed on the group type. ');
+
+    // Enable the group content plugin.
+    $this->drupalGet('/admin/group/content/install/default/group_content_menu:group_menu');
+    $page->pressButton('Install plugin');
+    $assert->pageTextContains('The content plugin was installed on the group type. ');
+
+    // Create a group.
+    $this->drupalGet('/group/add/default');
+    $page->fillField('label[0][value]', 'Group page');
+    $page->pressButton('Create Default label and complete your membership');
+    $page->pressButton('Save group and membership');
+    $this->drupalGet('/group/1/content/create/group_node:page');
+    $page->fillField('title[0][value]', 'Group node');
+    $page->pressButton('Save');
+
+    // Verify the node edit form works.
+    $this->drupalGet('/node/1/edit');
+    $assert->statusCodeEquals(200);
   }
 
   /**

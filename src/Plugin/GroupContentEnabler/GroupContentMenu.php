@@ -122,9 +122,9 @@ class GroupContentMenu extends GroupContentEnablerBase {
     $plugin_id = $this->getPluginId();
 
     $permissions["create $plugin_id content"] = [
-        'title' => 'Relate menu',
-        'description' => 'Allows you to relate a menu to the group.',
-      ];
+      'title' => 'Relate menu',
+      'description' => 'Allows you to relate a menu to the group.',
+    ];
     return $permissions;
   }
 

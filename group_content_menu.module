@@ -318,6 +318,10 @@ function group_content_menu_get_menu_link_default(NodeInterface $node, array $me
   $node_type = $node->type->entity;
   $menu_name = strtok($node_type->getThirdPartySetting('menu_ui', 'parent', 'main:'), ':');
   $defaults = ['id' => '', 'menu_name' => $menu_name, 'parent' => ''];
+  if (empty($menu_names)) {
+    // No menu is yet available.
+    return $defaults;
+  }
   if ($node->id()) {
     $query = \Drupal::entityQuery('menu_link_content')
       ->condition('link.uri', 'entity:node/' . $node->id())
