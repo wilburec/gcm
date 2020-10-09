@@ -56,6 +56,19 @@ class GroupContentMenuTest extends GroupBrowserTestBase {
     /** @var \Behat\Mink\Element\DocumentElement $page */
     $page = $this->getSession()->getPage();
 
+    // Create a group.
+    $this->drupalGet('/group/add/default');
+    $page->fillField('label[0][value]', 'Group page');
+    $page->pressButton('Create Default label and complete your membership');
+    $page->pressButton('Save group and membership');
+    $assert->statusCodeEquals(200);
+    $assert->pageTextContains('Default label Group page has been created.');
+
+    // Visit the group menu page.
+    $this->drupalGet('/group/1/menus');
+    $assert->statusCodeEquals(200);
+    $assert->pageTextContains('There are no group content menu entities yet.');
+
     // Generate a group content menu type.
     $this->drupalGet('admin/structure/group_content_menu_types');
     $page->clickLink('Add group menu type');
@@ -69,23 +82,17 @@ class GroupContentMenuTest extends GroupBrowserTestBase {
     // Enable the gnode content plugin for basic page.
     $this->drupalGet('/admin/group/content/install/default/group_node:page');
     $page->pressButton('Install plugin');
-    $assert->pageTextContains('The content plugin was installed on the group type. ');
+    $assert->pageTextContains('The content plugin was installed on the group type.');
 
     // Enable the group content plugin.
     $this->drupalGet('/admin/group/content/install/default/group_content_menu:group_menu');
     $page->pressButton('Install plugin');
-    $assert->pageTextContains('The content plugin was installed on the group type. ');
+    $assert->pageTextContains('The content plugin was installed on the group type.');
 
-    // Create a group.
-    $this->drupalGet('/group/add/default');
-    $page->fillField('label[0][value]', 'Group page');
-    $page->pressButton('Create Default label and complete your membership');
-    $page->pressButton('Save group and membership');
+    // Verify the node edit form works, even when no menu has been created yet.
     $this->drupalGet('/group/1/content/create/group_node:page');
     $page->fillField('title[0][value]', 'Group node');
     $page->pressButton('Save');
-
-    // Verify the node edit form works.
     $this->drupalGet('/node/1/edit');
     $assert->statusCodeEquals(200);
   }

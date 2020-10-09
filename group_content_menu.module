@@ -282,7 +282,7 @@ function group_content_menu_get_menus_per_group(GroupInterface $group) {
   foreach (array_keys($plugins) as $plugin_id) {
     $instances[] = \Drupal::entityTypeManager()->getStorage('group_content')->loadByGroup($group, $plugin_id);
   }
-  return array_merge(...$instances);
+  return $instances ? array_merge(...$instances) : [];
 }
 
 /**
