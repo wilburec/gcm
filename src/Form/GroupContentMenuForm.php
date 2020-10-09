@@ -371,7 +371,7 @@ class GroupContentMenuForm extends ContentEntityForm {
     }
     else {
       $this->messenger()->addStatus($this->t('The group menu <em>%label</em> has been update.', $arguments));
-      $this->logger('group_content_menu')->notice('Updated new group menu %label.', $arguments);
+      $this->logger('group_content_menu')->notice('Updated group menu %label.', $arguments);
     }
   }
 
