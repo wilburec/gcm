@@ -2,6 +2,7 @@
 
 namespace Drupal\group_content_menu;
 
+use Drupal\Core\Cache\Cache;
 use Drupal\Core\Menu\MenuParentFormSelector;
 
 /**
@@ -25,8 +26,11 @@ class GroupContentMenuParentFormSelector extends MenuParentFormSelector {
     if (strpos($menu_parent, GroupContentMenuInterface::MENU_PREFIX) !== FALSE) {
       $this->isGroupMenu = TRUE;
     }
-    return parent::parentSelectElement($menu_parent, $id, $menus);
-
+    $element = parent::parentSelectElement($menu_parent, $id, $menus);
+    // Add the group content list tag in case a menu is created, deleted, etc.
+    $element['#cache']['tags'] = $element['#cache']['tags'] ?? [];
+    $element['#cache']['tags'] = Cache::mergeTags($element['#cache']['tags'], ['group_content_list']);
+    return $element;
   }
 
   /**

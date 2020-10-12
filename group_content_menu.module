@@ -135,10 +135,12 @@ function group_content_menu_form_node_form_alter(&$form, FormStateInterface $for
       $default = $defaults['menu_name'] . ':' . $defaults['parent'];
     }
 
+    // Are there any traditional menus that are not group menus?
+    $traditional_menus = !empty($form['menu']['link']['menu_parent']['#options']);
+
     $form['menu'] = [
       '#type' => 'details',
       '#title' => t('Menu settings'),
-      '#access' => \Drupal::currentUser()->hasPermission('administer menu'),
       '#open' => (bool) $defaults['id'],
       '#group' => 'advanced',
       '#attached' => [
@@ -204,10 +206,18 @@ function group_content_menu_form_node_form_alter(&$form, FormStateInterface $for
       }
     }
 
-    // If no parent menus exist, don't render the menu settings.
-    if (empty($form['menu']['link']['menu_parent']['#options'])) {
-      $form['menu']['#access'] = FALSE;
+    $form['menu']['#access'] = FALSE;
+    if (!empty($form['menu']['link']['menu_parent']['#options'])) {
+      // If there are traditional menus and user has admin permission.
+      if ($traditional_menus && \Drupal::currentUser()->hasPermission('administer menu')) {
+        $form['menu']['#access'] = TRUE;
+      }
+      // If there are no traditional menus and user has group menu permission.
+      elseif (!$traditional_menus && ($route_group = \Drupal::routeMatch()->getParameter('group')) && $route_group->hasPermission('manage group_content_menu', \Drupal::currentUser())) {
+        $form['menu']['#access'] = TRUE;
+      }
     }
+
 
     $form['#entity_builders'][] = 'menu_ui_node_builder';
   }
