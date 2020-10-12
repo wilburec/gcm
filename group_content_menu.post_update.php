@@ -1,22 +1,22 @@
 <?php
 
-use Drupal\Core\Site\Settings;
-use Drupal\group_content_menu\GroupContentMenuInterface;
-use Drupal\menu_link_content\Entity\MenuLinkContent;
-
 /**
  * @file
  * Install hooks for group_content_menu module.
  */
 
+use Drupal\Core\Site\Settings;
+use Drupal\group_content_menu\GroupContentMenuInterface;
+use Drupal\menu_link_content\Entity\MenuLinkContent;
+
 /**
  * Re-write the menu prefix of all group content menus.
  */
-function group_content_menu_post_update_menu_prefix_rewrite_c(&$sandbox) {
+function group_content_menu_post_update_menu_prefix_rewrite(&$sandbox) {
   // If 'progress' is not set, this will be the first run of the batch.
   if (!isset($sandbox['progress'])) {
-    $sandbox['ids'] = \Drupal::entityTypeManager()->
-    getStorage('menu_link_content')->getQuery()
+    $sandbox['ids'] = \Drupal::entityTypeManager()->getStorage('menu_link_content')
+      ->getQuery()
       ->condition('menu_name', 'menu_link_content-group-menu-', 'STARTS_WITH')
       ->accessCheck(FALSE)
       ->sort('id', 'ASC')
@@ -30,6 +30,8 @@ function group_content_menu_post_update_menu_prefix_rewrite_c(&$sandbox) {
     $id = str_replace('menu_link_content-group-menu-', '', $menu_link->getMenuName());
     $updated_menu_name = GroupContentMenuInterface::MENU_PREFIX . $id;
     $menu_link->set('menu_name', $updated_menu_name);
+    // Fix #3144156 as well.
+    $menu_link->set('bundle', 'menu_link_content');
     $menu_link->save();
     // After the first menu link, there won't be any more tree entries,
     // so this isn't as bad performance as you would think.
