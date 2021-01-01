@@ -248,7 +248,16 @@ class GroupMenuBlock extends BlockBase implements ContainerFactoryPluginInterfac
     if (!$entity || $entity->isNew()) {
       return NULL;
     }
-    $instances = $this->entityTypeManager->getStorage('group_content')->loadByGroup($entity, $this->getPluginId());
+
+    /** @var \Drupal\group\Entity\Storage\GroupContentStorage $groupStorage */
+    $groupStorage = $this->entityTypeManager->getStorage('group_content');
+    $contentPluginId = $groupStorage->loadByContentPluginId($this->getPluginId());
+
+    if (empty($contentPluginId)) {
+      return NULL;
+    }
+
+    $instances = $groupStorage->loadByGroup($entity, $this->getPluginId());
     if ($instances) {
       return array_pop($instances)->getEntity();
     }

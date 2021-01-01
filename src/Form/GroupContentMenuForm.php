@@ -303,6 +303,7 @@ class GroupContentMenuForm extends ContentEntityForm {
             'title' => $this->t('Translate'),
             'url' => $link->getTranslateRoute(),
           ];
+          $operations['translate']['query'] = ['destination' => Url::fromRouteMatch($this->getRouteMatch())->toString()];
         }
 
         // Only display the operations to which the user has access.
