@@ -333,6 +333,87 @@ class GroupContentMenuTest extends GroupBrowserTestBase {
   }
 
   /**
+   * Test Expand All Menu Items option.
+   */
+  public function testExpandAllItems() {
+    /** @var \Drupal\Tests\WebAssert $assert */
+    $assert = $this->assertSession();
+    /** @var \Behat\Mink\Element\DocumentElement $page */
+    $page = $this->getSession()->getPage();
+
+    // Generate a group content menu type.
+    $this->drupalGet('admin/structure/group_content_menu_types');
+    $page->clickLink('Add group menu type');
+    $assert->statusCodeEquals(200);
+    $page->fillField('label', 'Group Menu');
+    $page->fillField('id', 'group_menu');
+    $page->pressButton('Save');
+    $assert->statusCodeEquals(200);
+    $assert->pageTextContains('The group menu type Group Menu has been added.');
+
+    // Place group content menu block.
+    $default_theme = $this->config('system.theme')->get('default');
+    $group_menu_block = $this->drupalPlaceBlock('group_content_menu:group_menu', [
+      'id' => $default_theme . '_groupmenu',
+      'context_mapping' => [
+        'group' => '@group.group_route_context:group',
+      ],
+    ]);
+    // Get the block ID so we can reference it later for edits.
+    $group_menu_block_id = $group_menu_block->id();
+
+    // Enable the group content plugin.
+    $this->drupalGet('/admin/group/content/install/default/group_content_menu:group_menu');
+    $page->checkField('auto_create_group_menu');
+    $page->checkField('auto_create_home_link');
+    $page->fillField('auto_create_home_link_title', 'Group home page');
+    $page->pressButton('Install plugin');
+    $assert->pageTextContains('The content plugin was installed on the group type. ');
+
+    // Add a group and group content menu.
+    $this->drupalGet('/group/add/default');
+    $group_title = $this->randomString();
+    $page->fillField('label[0][value]', $group_title);
+    $page->pressButton('Create Default label and complete your membership');
+    $page->pressButton('Save group and membership');
+    $assert->linkExists('Group home page');
+
+    // Add a parent link.
+    $this->drupalGet('/group/1/menu/1/add-link');
+    $assert->statusCodeEquals(200);
+    $link_top_level = $this->randomString(8);
+    $page->fillField('title[0][value]', $link_top_level);
+    $page->fillField('link[0][uri]', 'http://example.com');
+    $page->pressButton('Save');
+
+    // Add a Child link.
+    $this->drupalGet('/group/1/menu/1/add-link');
+    $assert->statusCodeEquals(200);
+    $link_sub_level = $this->randomString(8);
+    $page->fillField('title[0][value]', $link_sub_level);
+    $page->fillField('link[0][uri]', 'http://example1.com');
+    $page->selectFieldOption('menu_parent', '-- ' . $link_top_level);
+    $page->pressButton('Save');
+
+    $this->drupalGet('/group/1');
+    $assert->linkNotExists($link_sub_level);
+
+    // Set Block to expand all items
+    $this->drupalGet('admin/structure/block/manage/' . $group_menu_block_id);
+    $assert->checkboxNotChecked('settings[expand_all_items]');
+    $this->submitForm([
+      'settings[level]' => 1,
+      'settings[depth]' => 0,
+      'settings[expand_all_items]' => 1,
+    ], 'Save block');
+
+    // Check if we can now see all items.
+    $this->drupalGet('/group/1');
+    $assert->linkExists($link_top_level);
+    $assert->linkExists($link_sub_level);
+  }
+
+  /**
    * {@inheritdoc}
    */
   protected function getGlobalPermissions() {

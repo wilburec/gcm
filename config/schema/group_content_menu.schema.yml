@@ -8,6 +8,9 @@ group_content_menu_block:
     depth:
       type: integer
       label: 'Maximum number of levels'
+    expand_all_items:
+      type: boolean
+      label: 'Expand all items'
 
 block.settings.group_content_menu:*:
   type: group_content_menu_block

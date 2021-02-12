@@ -8,6 +8,7 @@ use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Menu\MenuActiveTrailInterface;
 use Drupal\Core\Menu\MenuLinkTreeInterface;
+use Drupal\Core\Menu\MenuTreeParameters;
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
 use Drupal\group_content_menu\GroupContentMenuInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -130,6 +131,13 @@ class GroupMenuBlock extends BlockBase implements ContainerFactoryPluginInterfac
       '#required' => TRUE,
     ];
 
+    $form['menu_levels']['expand_all_items'] = [
+      '#type' => 'checkbox',
+      '#title' => $this->t('Expand all menu items'),
+      '#default_value' => !empty($config['expand_all_items']),
+      '#description' => $this->t('Override the option found on each menu link used for expanding children and instead display the whole menu tree as expanded.'),
+    ];
+
     return $form;
   }
 
@@ -149,6 +157,7 @@ class GroupMenuBlock extends BlockBase implements ContainerFactoryPluginInterfac
   public function blockSubmit($form, FormStateInterface $form_state) {
     $this->configuration['level'] = $form_state->getValue('level');
     $this->configuration['depth'] = $form_state->getValue('depth');
+    $this->configuration['expand_all_items'] = $form_state->getValue('expand_all_items');
   }
 
   /**
@@ -156,7 +165,15 @@ class GroupMenuBlock extends BlockBase implements ContainerFactoryPluginInterfac
    */
   public function build() {
     $menu_name = $this->getMenuName();
-    $parameters = $this->menuTree->getCurrentRouteMenuTreeParameters($menu_name);
+    if ($this->configuration['expand_all_items']) {
+      $parameters = new MenuTreeParameters();
+      $active_trail = $this->menuActiveTrail->getActiveTrailIds($menu_name);
+      $parameters->setActiveTrail($active_trail);
+    }
+    else {
+      $parameters = $this->menuTree->getCurrentRouteMenuTreeParameters($menu_name);
+    }
+
 
     // Adjust the menu tree parameters based on the block's configuration.
     $level = $this->configuration['level'];
@@ -200,6 +217,7 @@ class GroupMenuBlock extends BlockBase implements ContainerFactoryPluginInterfac
     return [
       'level' => 1,
       'depth' => 0,
+      'expand_all_items' => FALSE,
     ];
   }
 
