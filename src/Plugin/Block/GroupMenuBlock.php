@@ -165,6 +165,10 @@ class GroupMenuBlock extends BlockBase implements ContainerFactoryPluginInterfac
    */
   public function build() {
     $menu_name = $this->getMenuName();
+    // If unable to determine the menu, prevent the block from rendering.
+    if (!$menu_name = $this->getMenuName()) {
+        return [];
+    }
     if ($this->configuration['expand_all_items']) {
       $parameters = new MenuTreeParameters();
       $active_trail = $this->menuActiveTrail->getActiveTrailIds($menu_name);
@@ -173,7 +177,6 @@ class GroupMenuBlock extends BlockBase implements ContainerFactoryPluginInterfac
     else {
       $parameters = $this->menuTree->getCurrentRouteMenuTreeParameters($menu_name);
     }
-
 
     // Adjust the menu tree parameters based on the block's configuration.
     $level = $this->configuration['level'];
