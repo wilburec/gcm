@@ -212,9 +212,13 @@ function group_content_menu_form_node_form_alter(&$form, FormStateInterface $for
       if ($traditional_menus && \Drupal::currentUser()->hasPermission('administer menu')) {
         $form['menu']['#access'] = TRUE;
       }
-      // If there are no traditional menus and user has group menu permission.
-      elseif (!$traditional_menus && ($route_group = \Drupal::routeMatch()->getParameter('group')) && $route_group->hasPermission('manage group_content_menu', \Drupal::currentUser())) {
-        $form['menu']['#access'] = TRUE;
+      else {
+        $context_id = '@group.group_route_context:group';
+        $contexts = \Drupal::service('context.repository')->getRuntimeContexts([$context_id]);
+        $group = $contexts[$context_id]->getContextValue();
+        if ($group && $group->hasPermission('manage group_content_menu', \Drupal::currentUser())) {
+          $form['menu']['#access'] = TRUE;
+        }
       }
     }
 
