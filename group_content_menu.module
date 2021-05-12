@@ -9,18 +9,13 @@ use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Render\Element;
 use Drupal\Core\Url;
-use Drupal\group\Entity\Group;
-use Drupal\group\Entity\GroupContent;
-use Drupal\group\Entity\GroupContentInterface;
 use Drupal\group\Entity\GroupInterface;
 use Drupal\group\Entity\GroupType;
 use Drupal\group_content_menu\Entity\GroupContentMenuType;
 use Drupal\group_content_menu\GroupContentMenuInterface;
+use Drupal\group_content_menu\NodeFormAlter;
 use Drupal\menu_link_content\Entity\MenuLinkContent;
-use Drupal\node\Entity\NodeType;
 use Drupal\node\NodeInterface;
-use Drupal\system\Entity\Menu;
-use Drupal\system\MenuInterface;
 
 /**
  * Implements hook_theme().
@@ -89,142 +84,8 @@ function group_content_menu_module_implements_alter(&$implementations, $hook) {
  * Implements hook_form_BASE_FORM_ID_alter().
  */
 function group_content_menu_form_node_form_alter(&$form, FormStateInterface $form_state) {
-  /** @var \Drupal\node\NodeInterface $node */
-  $node = $form_state->getFormObject()->getEntity();
-  /** @var \Drupal\node\NodeTypeInterface $node_type */
-  $node_type = NodeType::load($node->bundle());
-  $available_menus = $node_type->getThirdPartySetting('menu_ui', 'available_menus', ['main']);
-  $menu_ui_menus = array_map(static function (MenuInterface $menu) {
-    return $menu->label();
-  }, Menu::loadMultiple($available_menus));
-  $groups = [];
-  // Look for groups the node is part of.
-  if ($group_id = $form_state->get('group')) {
-    $groups[] = $group_id;
-  }
-  elseif (!$node->isNew()) {
-    $group_contents = GroupContent::loadByEntity($node);
-    $group_ids = array_map(static function (GroupContent $group_content) {
-      return $group_content->getGroup()->id();
-    }, $group_contents);
-    $groups = Group::loadMultiple($group_ids);
-  }
-
-  if ($groups) {
-    $group_menus = [];
-    foreach ($groups as $group) {
-      $group_menus[] = array_map(static function (GroupContentInterface $group_content) {
-        $id = GroupContentMenuInterface::MENU_PREFIX . $group_content->getEntity()->id();
-        return [$id => $group_content->getEntity()->label() . " ({$group_content->getGroup()->label()})"];
-      }, group_content_menu_get_menus_per_group($group));
-    }
-    // Unpack the group menus.
-    $group_menus = array_merge(...$group_menus);
-    // We have multiple levels of nested arrays, depending on if any groups have
-    // menus or not.
-    if ($group_menus) {
-      $group_menus = array_merge(...$group_menus);
-    }
-    $group_menus = array_unique($group_menus);
-    $defaults = menu_ui_get_menu_link_defaults($node);
-    if ($defaults['id']) {
-      $default = $defaults['menu_name'] . ':' . $defaults['parent'];
-    }
-    else {
-      $defaults = group_content_menu_get_menu_link_default($node, array_keys($group_menus));
-      $default = $defaults['menu_name'] . ':' . $defaults['parent'];
-    }
-
-    // Are there any traditional menus that are not group menus?
-    $traditional_menus = !empty($form['menu']['link']['menu_parent']['#options']);
-
-    $form['menu'] = [
-      '#type' => 'details',
-      '#title' => t('Menu settings'),
-      '#open' => (bool) $defaults['id'],
-      '#group' => 'advanced',
-      '#attached' => [
-        'library' => ['menu_ui/drupal.menu_ui'],
-      ],
-      '#tree' => TRUE,
-      '#weight' => -2,
-      '#attributes' => ['class' => ['menu-link-form']],
-    ];
-    $form['menu']['enabled'] = [
-      '#type' => 'checkbox',
-      '#title' => t('Provide a menu link'),
-      '#default_value' => (int) (bool) $defaults['id'],
-    ];
-    $form['menu']['link'] = [
-      '#type' => 'container',
-      '#parents' => ['menu'],
-      '#states' => [
-        'invisible' => [
-          'input[name="menu[enabled]"]' => ['checked' => FALSE],
-        ],
-      ],
-    ];
-
-    /** @var \Drupal\Core\Menu\MenuParentFormSelectorInterface $menu_parent_selector */
-    $menu_parent_selector = \Drupal::service('menu.parent_form_selector');
-    $parent_element = $menu_parent_selector->parentSelectElement($default, $defaults['id'], array_merge($group_menus, $menu_ui_menus));
-    $form['menu']['link']['menu_parent'] = $parent_element;
-
-    // Populate the element with the link data.
-    foreach (['id', 'entity_id'] as $key) {
-      $form['menu']['link'][$key] = ['#type' => 'value', '#value' => $defaults[$key]];
-    }
-
-    $form['menu']['link']['title'] = [
-      '#type' => 'textfield',
-      '#title' => t('Menu link title'),
-      '#default_value' => $defaults['title'],
-      '#maxlength' => $defaults['title_max_length'],
-    ];
-
-    $form['menu']['link']['description'] = [
-      '#type' => 'textfield',
-      '#title' => t('Description'),
-      '#default_value' => $defaults['description'],
-      '#description' => t('Shown when hovering over the menu link.'),
-      '#maxlength' => $defaults['description_max_length'],
-    ];
-
-    $form['menu']['link']['menu_parent']['#title'] = t('Parent item');
-    $form['menu']['link']['menu_parent']['#attributes']['class'][] = 'menu-parent-select';
-
-    $form['menu']['link']['weight'] = [
-      '#type' => 'number',
-      '#title' => t('Weight'),
-      '#default_value' => $defaults['weight'],
-      '#description' => t('Menu links with lower weights are displayed before links with higher weights.'),
-    ];
-
-    foreach (array_keys($form['actions']) as $action) {
-      if ($action !== 'preview' && isset($form['actions'][$action]['#type']) && $form['actions'][$action]['#type'] === 'submit') {
-        $form['actions'][$action]['#submit'][] = 'menu_ui_form_node_form_submit';
-      }
-    }
-
-    $form['menu']['#access'] = FALSE;
-    if (!empty($form['menu']['link']['menu_parent']['#options'])) {
-      // If there are traditional menus and user has admin permission.
-      if ($traditional_menus && \Drupal::currentUser()->hasPermission('administer menu')) {
-        $form['menu']['#access'] = TRUE;
-      }
-      else {
-        $context_id = '@group.group_route_context:group';
-        $contexts = \Drupal::service('context.repository')->getRuntimeContexts([$context_id]);
-        $group = $contexts[$context_id]->getContextValue();
-        if ($group && $group->hasPermission('manage group_content_menu', \Drupal::currentUser())) {
-          $form['menu']['#access'] = TRUE;
-        }
-      }
-    }
-
-
-    $form['#entity_builders'][] = 'menu_ui_node_builder';
-  }
+  \Drupal::classResolver(NodeFormAlter::class)
+    ->alter($form, $form_state);
 }
 
 /**
