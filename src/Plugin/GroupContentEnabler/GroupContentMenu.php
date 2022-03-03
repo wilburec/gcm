@@ -21,6 +21,7 @@ use Drupal\group_content_menu\Entity\GroupContentMenuType;
  *   reference_description = @Translation("The title of the menu to add to the group"),
  *   deriver = "Drupal\group_content_menu\Plugin\GroupContentEnabler\GroupContentMenuDeriver",
  *   handlers = {
+ *     "access" = "Drupal\group\Plugin\GroupContentAccessControlHandler",
  *     "permission_provider" = "Drupal\group_content_menu\Plugin\GroupContentMenuPermissionProvider",
  *   }
  * )
