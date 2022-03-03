@@ -217,6 +217,7 @@ function group_content_menu_get_menu_link_default(NodeInterface $node, array $me
       ->condition('link.uri', 'entity:node/' . $node->id())
       ->condition('menu_name', $menu_names, 'IN')
       ->sort('id', 'ASC')
+      ->accessCheck(TRUE)
       ->range(0, 1);
     $result = $query->execute();
 

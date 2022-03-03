@@ -236,7 +236,7 @@ class GroupContentMenuTest extends GroupBrowserTestBase {
     $menu_title = $this->randomString();
     $page->fillField('label[0][value]', $menu_title);
     $page->pressButton('Save');
-    $assert->pageTextContains("New group menu $menu_title has been created. ");
+    $assert->pageTextContains("New group menu $menu_title has been created.");
   }
 
   /**
