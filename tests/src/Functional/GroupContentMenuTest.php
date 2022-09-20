@@ -107,7 +107,7 @@ class GroupContentMenuTest extends GroupBrowserTestBase {
     // Verify the menu settings render even when no group menu has been created.
     $this->drupalGet('/group/1/content/create/group_node:page');
     $assert->pageTextContains('Menu settings');
-    $assert->pageTextContains('Parent item');
+    $assert->pageTextContains('Parent link');
     $page->fillField('title[0][value]', 'Group node');
     $page->pressButton('Save');
     $this->drupalGet('/node/1/edit');
@@ -130,8 +130,9 @@ class GroupContentMenuTest extends GroupBrowserTestBase {
     // Verify menu settings render when a group menu has been created.
     $this->drupalGet('/group/1/content/create/group_node:page');
     $assert->pageTextContains('Menu settings');
-    $assert->pageTextContains('Parent item');
+    $assert->pageTextContains('Parent link');
     $assert->optionExists('menu[menu_parent]', $menu_label);
+    $assert->optionExists('menu[menu_parent]', 'Main navigation');
     $page->fillField('title[0][value]', 'Group node');
     $page->pressButton('Save');
     $this->drupalGet('/node/2/edit');
@@ -140,7 +141,8 @@ class GroupContentMenuTest extends GroupBrowserTestBase {
     // Verify the menu settings display, even if no default menu selected.
     $this->drupalGet('/group/1/content/create/group_node:article');
     $assert->pageTextContains('Menu settings');
-    $assert->pageTextContains('Parent item');
+    $assert->pageTextContains('Parent link');
+    $assert->optionNotExists('menu[menu_parent]', 'Main navigation');
   }
 
   /**
