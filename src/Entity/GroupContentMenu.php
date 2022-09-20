@@ -46,6 +46,7 @@ use Drupal\group_content_menu\GroupContentMenuInterface;
  *     "add-page" = "/group/{group}/menu/add",
  *     "add-menu-link" = "/group/{group}/menu/{group_content_menu}/add-link",
  *     "edit-menu-link" = "/group/{group}/menu/{group_content_menu}/link/{menu_link_content}",
+ *     "delete-menu-link" = "/group/{group}/menu/{group_content_menu}/link/{menu_link_content}/delete",
  *     "edit-form" = "/group/{group}/menu/{group_content_menu}/edit",
  *     "delete-form" = "/group/{group}/menu/{group_content_menu}/delete",
  *     "collection" = "/group/{group}/menus"

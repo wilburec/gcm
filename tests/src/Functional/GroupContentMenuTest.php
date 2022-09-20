@@ -228,6 +228,11 @@ class GroupContentMenuTest extends GroupBrowserTestBase {
     $this->drupalGet('/group/1/menu/1/edit');
     $assert->statusCodeEquals(200);
 
+    // Delete the link
+    $this->drupalGet('/group/1/menu/1/link/2/delete');
+    $page->pressButton('Delete');
+    $assert->pageTextContains("The menu link $link_title has been deleted.");
+
     // Delete menu.
     $this->drupalGet('/group/1/menu/1/delete');
     $page->pressButton('Delete');

@@ -285,7 +285,8 @@ class GroupContentMenuForm extends ContentEntityForm {
           'menu_link_content' => $link->getMetaData()['entity_id'],
         ]);
         // Bring the user back to the menu overview.
-        $operations['edit']['query'] = ['destination' => Url::fromRouteMatch($this->getRouteMatch())->toString()];
+        $operations['edit']['query'] = $this->getRedirectDestination()->getAsArray();
+
         // Links can either be reset or deleted, not both.
         if ($link->isResettable()) {
           $operations['reset'] = [
@@ -293,8 +294,12 @@ class GroupContentMenuForm extends ContentEntityForm {
             'url' => Url::fromRoute('menu_ui.link_reset', ['menu_link_plugin' => $link->getPluginId()]),
           ];
         }
-        elseif ($delete_link = $link->getDeleteRoute()) {
-          $operations['delete']['url'] = $delete_link;
+        if ($link->isDeletable()) {
+          $operations['delete']['url'] = Url::fromRoute('entity.group_content_menu.delete_link', [
+            'group' => $group->id(),
+            'group_content_menu' => $this->entity->id(),
+            'menu_link_content' => $link->getMetaData()['entity_id'],
+          ]);
           $operations['delete']['query'] = $this->getRedirectDestination()->getAsArray();
           $operations['delete']['title'] = $this->t('Delete');
         }

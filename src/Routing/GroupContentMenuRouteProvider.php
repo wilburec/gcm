@@ -22,8 +22,11 @@ class GroupContentMenuRouteProvider extends DefaultHtmlRouteProvider {
     if ($add_menu_link = $this->getAddMenuLink($entity_type)) {
       $collection->add('entity.group_content_menu.add_link', $add_menu_link);
     }
-    if ($add_menu_link = $this->getEditMenuLink($entity_type)) {
-      $collection->add('entity.group_content_menu.edit_link', $add_menu_link);
+    if ($edit_menu_link = $this->getEditMenuLink($entity_type)) {
+      $collection->add('entity.group_content_menu.edit_link', $edit_menu_link);
+    }
+    if ($delete_menu_link = $this->getDeleteMenuLink($entity_type)) {
+      $collection->add('entity.group_content_menu.delete_link', $delete_menu_link);
     }
 
     return $collection;
@@ -72,6 +75,35 @@ class GroupContentMenuRouteProvider extends DefaultHtmlRouteProvider {
         ->setDefaults([
           '_title' => 'Edit menu link',
           '_controller' => sprintf('%s::editLink', GroupContentMenuController::class),
+        ])
+        ->setRequirement('_group_permission', 'manage group_content_menu')
+        ->setRequirement('_group_installed_content', implode('+', $this->getPluginIds()))
+        ->setOption('parameters', [
+          'group' => ['type' => 'entity:group'],
+          'group_content_menu' => ['type' => 'entity:group_content_menu'],
+          'menu_link_content' => ['type' => 'entity:menu_link_content'],
+        ])
+        ->setOption('_group_operation_route', TRUE);
+    }
+  }
+
+
+  /**
+   * Gets the delete-menu-link route.
+   *
+   * @param \Drupal\Core\Entity\EntityTypeInterface $entity_type
+   *   The entity type.
+   *
+   * @return \Symfony\Component\Routing\Route|null
+   *   The generated route, if available.
+   */
+  protected function getDeleteMenuLink(EntityTypeInterface $entity_type) {
+    if ($entity_type->hasLinkTemplate('delete-menu-link')) {
+      $route = new Route($entity_type->getLinkTemplate('delete-menu-link'));
+      return $route
+        ->setDefaults([
+          '_title' => 'Delete menu link',
+          '_controller' => sprintf('%s::deleteLink', GroupContentMenuController::class),
         ])
         ->setRequirement('_group_permission', 'manage group_content_menu')
         ->setRequirement('_group_installed_content', implode('+', $this->getPluginIds()))

@@ -184,4 +184,17 @@ class GroupContentMenuController extends GroupContentController {
     return $this->entityFormBuilder()->getForm($menu_link_content);
   }
 
+  /**
+   * Provides the menu link delete form.
+   *
+   * @param \Drupal\menu_link_content\MenuLinkContentInterface $menu_link_content
+   *   The menu link content.
+   *
+   * @return array
+   *   Returns the menu link delete form.
+   */
+  public function deleteLink(MenuLinkContentInterface $menu_link_content) {
+    return $this->entityFormBuilder()->getForm($menu_link_content, 'delete');
+  }
+
 }
