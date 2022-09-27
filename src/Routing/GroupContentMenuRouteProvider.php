@@ -76,7 +76,7 @@ class GroupContentMenuRouteProvider extends DefaultHtmlRouteProvider {
           '_title' => 'Edit menu link',
           '_controller' => sprintf('%s::editLink', GroupContentMenuController::class),
         ])
-        ->setRequirement('_group_permission', 'manage group_content_menu')
+        ->setRequirement('_group_permission', 'manage group_content_menu menu items')
         ->setRequirement('_group_installed_content', implode('+', $this->getPluginIds()))
         ->setOption('parameters', [
           'group' => ['type' => 'entity:group'],
@@ -105,7 +105,7 @@ class GroupContentMenuRouteProvider extends DefaultHtmlRouteProvider {
           '_title' => 'Delete menu link',
           '_controller' => sprintf('%s::deleteLink', GroupContentMenuController::class),
         ])
-        ->setRequirement('_group_permission', 'manage group_content_menu')
+        ->setRequirement('_group_permission', 'manage group_content_menu menu items')
         ->setRequirement('_group_installed_content', implode('+', $this->getPluginIds()))
         ->setOption('parameters', [
           'group' => ['type' => 'entity:group'],
@@ -121,6 +121,11 @@ class GroupContentMenuRouteProvider extends DefaultHtmlRouteProvider {
    */
   protected function getAddPageRoute(EntityTypeInterface $entity_type) {
     if ($route = parent::getAddPageRoute($entity_type)) {
+      $requirements = $route->getRequirements();
+      // Remove entity access requirement since we only want group permissions,
+      // not some global user permission.
+      unset($requirements['_entity_create_any_access']);
+      $route->setRequirements($requirements);
       return $route
         ->setDefaults([
           '_title' => 'Add new menu',
@@ -138,6 +143,8 @@ class GroupContentMenuRouteProvider extends DefaultHtmlRouteProvider {
   protected function getAddFormRoute(EntityTypeInterface $entity_type) {
     if ($route = parent::getAddFormRoute($entity_type)) {
       $requirements = $route->getRequirements();
+      // Remove entity access requirement since we only want group permissions,
+      // not some global user permission.
       unset($requirements['_entity_create_access']);
       $route->setRequirements($requirements);
       return $route
@@ -184,24 +191,8 @@ class GroupContentMenuRouteProvider extends DefaultHtmlRouteProvider {
   protected function getCanonicalRoute(EntityTypeInterface $entity_type) {
     if ($route = parent::getCanonicalRoute($entity_type)) {
       $requirements = $route->getRequirements();
-      unset($requirements['_entity_access']);
-      $route->setRequirements($requirements);
-      return $route
-        ->setRequirement('_group_menu_owns_content', 'TRUE')
-        ->setOption('_group_operation_route', TRUE)
-        ->setOption('parameters', [
-          'group' => ['type' => 'entity:group'],
-          'group_content_menu' => ['type' => 'entity:group_content_menu'],
-        ]);
-    }
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  protected function getEditFormRoute(EntityTypeInterface $entity_type) {
-    if ($route = parent::getEditFormRoute($entity_type)) {
-      $requirements = $route->getRequirements();
+      // Remove entity access requirement since we only want group permissions,
+      // not some global user permission.
       unset($requirements['_entity_access']);
       $route->setRequirements($requirements);
       return $route
@@ -218,9 +209,32 @@ class GroupContentMenuRouteProvider extends DefaultHtmlRouteProvider {
   /**
    * {@inheritdoc}
    */
+  protected function getEditFormRoute(EntityTypeInterface $entity_type) {
+    if ($route = parent::getEditFormRoute($entity_type)) {
+      $requirements = $route->getRequirements();
+      // Remove entity access requirement since we only want group permissions,
+      // not some global user permission.
+      unset($requirements['_entity_access']);
+      $route->setRequirements($requirements);
+      return $route
+        ->setRequirement('_group_menu_owns_content', 'TRUE')
+        ->setRequirement('_group_permission', 'manage group_content_menu menu items')
+        ->setOption('_group_operation_route', TRUE)
+        ->setOption('parameters', [
+          'group' => ['type' => 'entity:group'],
+          'group_content_menu' => ['type' => 'entity:group_content_menu'],
+        ]);
+    }
+  }
+
+  /**
+   * {@inheritdoc}
+   */
   protected function getDeleteFormRoute(EntityTypeInterface $entity_type) {
     if ($route = parent::getDeleteFormRoute($entity_type)) {
       $requirements = $route->getRequirements();
+      // Remove entity access requirement since we only want group permissions,
+      // not some global user permission.
       unset($requirements['_entity_access']);
       $route->setRequirements($requirements);
       return $route

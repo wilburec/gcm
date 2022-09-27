@@ -32,6 +32,10 @@ class GroupContentMenuPermissionProvider extends GroupContentPermissionProvider 
       'Manage menus',
       'Create, update and delete menus'
     );
+    $permissions['manage group_content_menu menu items'] = $this->buildPermission(
+      'Manage menu items',
+      'Create, update and delete menu items within group menus'
+    );
 
     return $permissions;
   }
