@@ -164,10 +164,7 @@ class GroupContentMenuForm extends ContentEntityForm {
     // Supply the empty text.
     if ($has_permission) {
       $form['links']['#empty'] = $this->t('There are no menu links yet. <a href=":url">Add link</a>.', [
-        ':url' => Url::fromRoute('entity.group_content_menu.add_link', [
-          'group' => $group->id(),
-          'group_content_menu' => $this->entity->id(),
-        ], [
+        ':url' => $this->entity->toUrl('add-menu-link', [
           'query' => ['destination' => $this->entity->toUrl('edit-form')->toString()],
         ])->toString(),
       ]);
@@ -279,7 +276,7 @@ class GroupContentMenuForm extends ContentEntityForm {
         ];
         // Use this module's edit route for the menu. This means we don't have
         // to give elevated menu_ui access to edit menu links.
-        $operations['edit']['url'] = Url::fromRoute('entity.group_content_menu.edit_link', [
+        $operations['edit']['url'] = Url::fromRoute('entity.group_content_menu.edit_menu_link', [
           'group' => $group->id(),
           'group_content_menu' => $this->entity->id(),
           'menu_link_content' => $link->getMetaData()['entity_id'],
@@ -295,7 +292,7 @@ class GroupContentMenuForm extends ContentEntityForm {
           ];
         }
         if ($link->isDeletable()) {
-          $operations['delete']['url'] = Url::fromRoute('entity.group_content_menu.delete_link', [
+          $operations['delete']['url'] = Url::fromRoute('entity.group_content_menu.delete_menu_link', [
             'group' => $group->id(),
             'group_content_menu' => $this->entity->id(),
             'menu_link_content' => $link->getMetaData()['entity_id'],

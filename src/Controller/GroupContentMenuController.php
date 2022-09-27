@@ -81,7 +81,7 @@ class GroupContentMenuController extends GroupContentController {
         $description = $this->t('Add new menu of type %bundle_label to the group.', ['%bundle_label' => $bundle_label]);
         $build['#bundles'][$bundle_name]['label'] = $bundle_label;
         $build['#bundles'][$bundle_name]['description'] = $description;
-        $build['#bundles'][$bundle_name]['add_link'] = Link::createFromRoute($label, 'entity.group_content_menu.add_form', ['group' => $group->id(), 'plugin_id' => $plugin_id]);
+        $build['#bundles'][$bundle_name]['add_menu'] = Link::createFromRoute($label, 'entity.group_content_menu.add_form', ['group' => $group->id(), 'plugin_id' => $plugin_id]);
       }
     }
 

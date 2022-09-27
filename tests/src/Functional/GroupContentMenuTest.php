@@ -135,20 +135,21 @@ class GroupContentMenuTest extends GroupBrowserTestBase {
 
     // Create new group content menu.
     $this->drupalGet('/group/1/menu/add');
-    $menu_label = $this->randomString();
-    $page->fillField('label[0][value]', $menu_label);
+    $new_menu_label = $this->randomString();
+    $page->fillField('label[0][value]', $new_menu_label);
     $page->pressButton('Save');
 
     // Only one group content menu instance is created.
     $this->drupalGet('/group/1/content');
-    $assert->pageTextContainsOnce($menu_label);
+    $assert->pageTextContainsOnce($new_menu_label);
 
     // Verify menu settings render when a group menu has been created.
     $this->drupalGet('/group/1/content/create/group_node:page');
     $assert->pageTextContains('Menu settings');
     $assert->pageTextContains('Parent link');
-    $assert->optionExists('menu[menu_parent]', $menu_label);
-    $assert->optionExists('menu[menu_parent]', 'Main navigation');
+    $page->checkField('menu[enabled]');
+    $assert->optionExists('menu[menu_parent]', "<$new_menu_label ($group_name)>");
+    $assert->optionExists('menu[menu_parent]', '<Main navigation>');
     $page->fillField('title[0][value]', 'Group node');
     $page->pressButton('Save');
     $this->drupalGet('/node/2/edit');
@@ -599,18 +600,18 @@ class GroupContentMenuTest extends GroupBrowserTestBase {
       'group_content_menu' => 1,
     ]));
     $assert->statusCodeEquals($status_code);
-    $this->drupalGet(Url::fromRoute('entity.group_content_menu.add_link', [
+    $this->drupalGet(Url::fromRoute('entity.group_content_menu.add_menu_link', [
       'group' => 1,
       'group_content_menu' => 1,
     ]));
     $assert->statusCodeEquals($status_code);
-    $this->drupalGet(Url::fromRoute('entity.group_content_menu.edit_link', [
+    $this->drupalGet(Url::fromRoute('entity.group_content_menu.edit_menu_link', [
       'group' => 1,
       'group_content_menu' => 1,
       'menu_link_content' => 1,
     ]));
     $assert->statusCodeEquals($status_code);
-    $this->drupalGet(Url::fromRoute('entity.group_content_menu.delete_link', [
+    $this->drupalGet(Url::fromRoute('entity.group_content_menu.delete_menu_link', [
       'group' => 1,
       'group_content_menu' => 1,
       'menu_link_content' => 1,

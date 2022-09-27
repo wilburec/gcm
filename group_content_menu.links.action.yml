@@ -9,8 +9,8 @@ entity.group_content_menu.add_page:
   title: 'Add new menu'
   appears_on:
     - entity.group_content_menu.collection
-entity.group_content_menu.add_link:
-  route_name: entity.group_content_menu.add_link
+entity.group_content_menu.add_menu_link:
+  route_name: entity.group_content_menu.add_menu_link
   title: 'Add link'
   class: \Drupal\menu_ui\Plugin\Menu\LocalAction\MenuLinkAdd
   appears_on:

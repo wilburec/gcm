@@ -20,13 +20,13 @@ class GroupContentMenuRouteProvider extends DefaultHtmlRouteProvider {
     $collection = parent::getRoutes($entity_type);
 
     if ($add_menu_link = $this->getAddMenuLink($entity_type)) {
-      $collection->add('entity.group_content_menu.add_link', $add_menu_link);
+      $collection->add('entity.group_content_menu.add_menu_link', $add_menu_link);
     }
     if ($edit_menu_link = $this->getEditMenuLink($entity_type)) {
-      $collection->add('entity.group_content_menu.edit_link', $edit_menu_link);
+      $collection->add('entity.group_content_menu.edit_menu_link', $edit_menu_link);
     }
     if ($delete_menu_link = $this->getDeleteMenuLink($entity_type)) {
-      $collection->add('entity.group_content_menu.delete_link', $delete_menu_link);
+      $collection->add('entity.group_content_menu.delete_menu_link', $delete_menu_link);
     }
 
     return $collection;
