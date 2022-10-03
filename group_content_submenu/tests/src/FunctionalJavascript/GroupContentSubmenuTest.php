@@ -5,16 +5,17 @@ namespace Drupal\Tests\group_content_submenu\FunctionalJavascript;
 use Drupal\field\Entity\FieldConfig;
 use Drupal\FunctionalJavascriptTests\WebDriverTestBase;
 use Drupal\group\Entity\Group;
-use Drupal\group\Entity\GroupContent;
-use Drupal\group\Entity\GroupRole;
 use Drupal\group\Entity\GroupType;
 use Drupal\group_content_menu\Entity\GroupContentMenu;
 use Drupal\group_content_menu\Entity\GroupContentMenuType;
-use Drupal\group_content_menu\GroupContentMenuInterface;
-use Drupal\group_content_submenu\ShadowlinkHelper;
 use Drupal\menu_link_content\Entity\MenuLinkContent;
 use Drupal\system\Entity\Menu;
 
+/**
+ * Test description.
+ *
+ * @group group_content_menu
+ */
 class GroupContentSubmenuTest extends WebDriverTestBase  {
 
   /**
