@@ -4,5 +4,6 @@ description: Embed a group content menu in a core menu.
 package: group
 core: 8.x
 core_version_requirement: ^8 || ^9
+php: 8.0
 dependencies:
   - group_content_menu
