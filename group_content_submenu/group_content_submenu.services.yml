@@ -1,0 +1,5 @@
+services:
+  group_content_submenu.plugin.manager.menu.link:
+    decorates: plugin.manager.menu.link
+    class: Drupal\group_content_submenu\MenuLinkManager
+    arguments: ['@group_content_submenu.plugin.manager.menu.link.inner']

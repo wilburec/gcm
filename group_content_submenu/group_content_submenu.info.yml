@@ -1,0 +1,8 @@
+name: Group content submenu
+type: module
+description: Embed a group content menu in a core menu.
+package: group
+core: 8.x
+core_version_requirement: ^8 || ^9
+dependencies:
+  - group_content_menu
