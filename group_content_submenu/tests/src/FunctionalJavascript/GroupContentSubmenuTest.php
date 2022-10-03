@@ -118,7 +118,6 @@ class GroupContentSubmenuTest extends WebDriverTestBase  {
     $assert->assertWaitOnAjaxRequest();
     $page->selectFieldOption('parent_menu_link', $this->coreMenuLinkTitle);
     $page->pressButton('Save');
-    file_put_contents('/tmp/log.html', $page->getOuterHtml());
     $this->drupalGet($core_link->toUrl('edit-form'));
     $links = MenuLinkContent::loadMultiple(NULL);
     unset($links[$core_link->id()]);
