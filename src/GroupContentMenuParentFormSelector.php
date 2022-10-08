@@ -37,30 +37,23 @@ class GroupContentMenuParentFormSelector extends MenuParentFormSelector {
    * {@inheritdoc}
    */
   protected function getMenuOptions(array $menu_names = NULL) {
-    $entity_type = 'menu';
-    if ($this->isGroupMenu) {
-      $entity_type = 'group_content_menu';
+    if (!$this->isGroupMenu) {
+      return parent::getMenuOptions($menu_names);
     }
-
-    $menus = $this->entityTypeManager->getStorage($entity_type)->loadMultiple($menu_names);
+    if (!$route_group = \Drupal::routeMatch()->getParameter('group')) {
+      return [];
+    }
+    $group_content_menus = $this->entityTypeManager->getStorage('group_content_menu')->loadMultiple($menu_names);
     $options = [];
-    /** @var \Drupal\system\MenuInterface[] $menus */
-    foreach ($menus as $menu) {
-      if ($this->isGroupMenu) {
-        if ($route_group = \Drupal::routeMatch()->getParameter('group')) {
-          $group_contents = $this->entityTypeManager->getStorage('group_content')->loadByEntity($menu);
-          if ($group_contents) {
-            $menu_group = array_pop($group_contents)->getGroup();
-            if ($menu_group->id() === $route_group->id()) {
-              $options[GroupContentMenuInterface::MENU_PREFIX . $menu->id()] = $menu->label() . " ({$menu_group->label()})";
-            }
-          }
+    /** @var \Drupal\group_content_menu\GroupContentMenuInterface[] $menus */
+    foreach ($group_content_menus as $group_content_menu) {
+      $group_contents = $this->entityTypeManager->getStorage('group_content')->loadByEntity($group_content_menu);
+      if ($group_contents) {
+        $menu_group = array_pop($group_contents)->getGroup();
+        if ($menu_group->id() === $route_group->id()) {
+          $options[GroupContentMenuInterface::MENU_PREFIX . $group_content_menu->id()] = $group_content_menu->label() . " ({$menu_group->label()})";
         }
       }
-      else {
-        $options[$menu->id()] = $menu->label();
-      }
-
     }
     return $options;
   }
