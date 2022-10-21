@@ -318,7 +318,7 @@ class NodeFormAlter implements ContainerInjectionInterface {
     if ($user->hasPermission('administer menu')) {
       return TRUE;
     }
-    if ($group->hasPermission('manage group_content_menu', $user)) {
+    if ($group->hasPermission('manage group_content_menu menu items', $user)) {
       return TRUE;
     }
 

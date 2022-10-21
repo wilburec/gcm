@@ -464,6 +464,17 @@ class GroupContentMenuTest extends GroupBrowserTestBase {
     $group_content_menu->save();
     $group = $this->createGroup();
 
+    // Enable node group content type plugin.
+    $plugin_id = 'group_node:article';
+    $group_type = $group->getGroupType();
+    $this->container->get('plugin.manager.group_content_enabler')->clearCachedDefinitions();
+    $this->entityTypeManager->getStorage('group_content_type')->createFromPlugin(
+      $group_type,
+      $plugin_id,
+      []
+    )->save();
+    $node_permission_provider = $this->container->get('plugin.manager.group_content_enabler')->getPermissionProvider($plugin_id);
+
     // Grant permissions and create group admin, menu admin, member and
     // outsider, and anonymous roles.
     // Admin role.
@@ -479,6 +490,8 @@ class GroupContentMenuTest extends GroupBrowserTestBase {
       'manage group_content_menu' => TRUE,
       'manage group_content_menu menu items' => FALSE,
       'view group' => TRUE,
+      $node_permission_provider->getPermission('create', 'entity', 'any') => TRUE,
+      $node_permission_provider->getPermission('create', 'relation', 'any') => TRUE,
     ])->save();
     // Menu admin.
     $menu_admin_role = $this->entityTypeManager->getStorage('group_role')->create([
@@ -493,6 +506,8 @@ class GroupContentMenuTest extends GroupBrowserTestBase {
       'manage group_content_menu' => FALSE,
       'manage group_content_menu menu items' => TRUE,
       'view group' => TRUE,
+      $node_permission_provider->getPermission('create', 'entity', 'any') => TRUE,
+      $node_permission_provider->getPermission('create', 'relation', 'any') => TRUE,
     ])->save();
     // Member role.
     $role = $group_type->getMemberRole();
@@ -522,10 +537,10 @@ class GroupContentMenuTest extends GroupBrowserTestBase {
       'access content',
     ]);
     $member = $this->drupalCreateUser([
-      'access content'
+      'access content',
     ]);
     $outsider = $this->drupalCreateUser([
-      'access content'
+      'access content',
     ]);
     $anonymous = User::load(0);
 
@@ -549,7 +564,6 @@ class GroupContentMenuTest extends GroupBrowserTestBase {
     $this->assertMenuPermissions($member, 403);
     $this->assertMenuPermissions($outsider, 403);
     $this->assertMenuPermissions($anonymous, 403);
-
   }
 
   /**
@@ -617,6 +631,17 @@ class GroupContentMenuTest extends GroupBrowserTestBase {
       'menu_link_content' => 1,
     ]));
     $assert->statusCodeEquals($status_code);
+
+    $this->drupalGet('/group/1/content/create/group_node:article');
+    if ($status_code === 200) {
+      $assert->pageTextContains('Menu settings');
+      $assert->pageTextContains('Parent link');
+      $assert->fieldExists('menu[enabled]');
+    }
+    else {
+      $assert->pageTextNotContains('Menu settings');
+      $assert->fieldNotExists('menu[enabled]');
+    }
   }
 
   /**
