@@ -191,11 +191,7 @@ class GroupMenuBlock extends BlockBase implements ContainerFactoryPluginInterfac
     }
 
     $tree = $this->menuTree->load($menu_name, $parameters);
-    $manipulators = [
-      ['callable' => 'menu.default_tree_manipulators:checkAccess'],
-      ['callable' => 'menu.default_tree_manipulators:generateIndexAndSort'],
-    ];
-    $tree = $this->menuTree->transform($tree, $manipulators);
+    $tree = $this->menuTree->transform($tree, $this->getMenuManipulators());
     $build = $this->menuTree->build($tree);
     $menu_instance = $this->getMenuInstance();
     if ($menu_instance instanceof GroupContentMenuInterface) {
@@ -304,6 +300,13 @@ class GroupMenuBlock extends BlockBase implements ContainerFactoryPluginInterfac
       $this->menuName = GroupContentMenuInterface::MENU_PREFIX . $instance->id();
     }
     return $this->menuName;
+  }
+
+  protected function getMenuManipulators(): array {
+    return [
+      ['callable' => 'menu.default_tree_manipulators:checkAccess'],
+      ['callable' => 'menu.default_tree_manipulators:generateIndexAndSort'],
+    ];
   }
 
 }
