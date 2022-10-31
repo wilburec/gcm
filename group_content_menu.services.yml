@@ -5,3 +5,6 @@ services:
       - '@entity_type.manager'
     tags:
       - { name: access_check, applies_to: _group_menu_owns_content }
+  group_content_menu.menu_id_helper:
+    class: Drupal\group_content_menu\MenuIdHelper
+    arguments: ['@menu.tree_storage', '@entity_type.manager']

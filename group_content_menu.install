@@ -1,0 +1,32 @@
+<?php
+
+/**
+ * @file
+ */
+
+use Drupal\Core\Extension\ModuleInstallerInterface;
+use Drupal\Core\Field\BaseFieldDefinition;
+
+/**
+ * Implements hook_update_N().
+ */
+function group_content_menu_update_9000() {
+  $installer = \Drupal::service('module_installer');
+  assert($installer instanceof ModuleInstallerInterface);
+  $installer->install(['menu_link_reference']);
+  $field = BaseFieldDefinition::create('menu_link_reference')
+    ->setLabel(t('Menu parent'))
+    ->setRequired(FALSE)
+    ->setTranslatable(FALSE)
+    ->setDisplayOptions('view', [
+      'region' => 'hidden',
+    ])
+    ->setDisplayOptions('form', [
+      'region' => 'hidden',
+    ])
+    ->setDisplayConfigurable('view', FALSE)
+    ->setDisplayConfigurable('form', TRUE);
+  \Drupal::entityDefinitionUpdateManager()
+    ->installFieldStorageDefinition('parent', 'group_content_menu', 'group_content_menu', $field);
+
+}

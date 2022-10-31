@@ -29,7 +29,8 @@ use Drupal\group_content_menu\GroupContentMenuInterface;
  *     },
  *     "route_provider" = {
  *       "html" = "Drupal\group_content_menu\Routing\GroupContentMenuRouteProvider",
- *     }
+ *     },
+ *     "storage" = "Drupal\group_content_menu\GroupContentMenuStorage",
  *   },
  *   base_table = "group_content_menu",
  *   data_table = "group_content_menu_field_data",
@@ -60,6 +61,13 @@ class GroupContentMenu extends ContentEntityBase implements GroupContentMenuInte
   /**
    * {@inheritdoc}
    */
+  public function getMenuName(): string {
+    return $this->parent->menu_name ?: (GroupContentMenuInterface::MENU_PREFIX . $this->id());
+  }
+
+  /**
+   * {@inheritdoc}
+   */
   public static function baseFieldDefinitions(EntityTypeInterface $entity_type) {
     $fields = parent::baseFieldDefinitions($entity_type);
     $fields['label'] = BaseFieldDefinition::create('string')
@@ -77,6 +85,18 @@ class GroupContentMenu extends ContentEntityBase implements GroupContentMenuInte
         'weight' => -5,
       ])
       ->setDisplayConfigurable('view', TRUE)
+      ->setDisplayConfigurable('form', TRUE);
+    $fields['parent'] = BaseFieldDefinition::create('menu_link_reference')
+      ->setLabel(t('Menu parent'))
+      ->setRequired(FALSE)
+      ->setTranslatable(FALSE)
+      ->setDisplayOptions('view', [
+        'region' => 'hidden',
+      ])
+      ->setDisplayOptions('form', [
+        'region' => 'hidden',
+      ])
+      ->setDisplayConfigurable('view', FALSE)
       ->setDisplayConfigurable('form', TRUE);
 
     return $fields;

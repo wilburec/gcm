@@ -11,6 +11,7 @@ use Drupal\Core\Menu\MenuLinkTreeInterface;
 use Drupal\Core\Menu\MenuTreeParameters;
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
 use Drupal\group_content_menu\GroupContentMenuInterface;
+use Drupal\group_content_menu\GroupContentMenuStorageInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -164,10 +165,9 @@ class GroupMenuBlock extends BlockBase implements ContainerFactoryPluginInterfac
    * {@inheritdoc}
    */
   public function build() {
-    $menu_name = $this->getMenuName();
     // If unable to determine the menu, prevent the block from rendering.
     if (!$menu_name = $this->getMenuName()) {
-        return [];
+      return [];
     }
     if ($this->configuration['expand_all_items']) {
       $parameters = new MenuTreeParameters();
@@ -190,10 +190,12 @@ class GroupMenuBlock extends BlockBase implements ContainerFactoryPluginInterfac
       $parameters->setMaxDepth(min($level + $depth - 1, $this->menuTree->maxDepth()));
     }
 
-    $tree = $this->menuTree->load($menu_name, $parameters);
+    $menu_instance = $this->getMenuInstance();
+    $group_content_menu_storage = $this->entityTypeManager->getStorage('group_content_menu');
+    assert($group_content_menu_storage instanceof GroupContentMenuStorageInterface);
+    $tree = $group_content_menu_storage->loadMenuTree($menu_instance, $parameters);
     $tree = $this->menuTree->transform($tree, $this->getMenuManipulators());
     $build = $this->menuTree->build($tree);
-    $menu_instance = $this->getMenuInstance();
     if ($menu_instance instanceof GroupContentMenuInterface) {
       $build['#contextual_links']['group_menu'] = [
         'route_parameters' => [
@@ -297,11 +299,14 @@ class GroupMenuBlock extends BlockBase implements ContainerFactoryPluginInterfac
     }
     $instance = $this->getMenuInstance();
     if ($instance) {
-      $this->menuName = GroupContentMenuInterface::MENU_PREFIX . $instance->id();
+      $this->menuName = $instance->getMenuName();
     }
     return $this->menuName;
   }
 
+  /**
+   *
+   */
   protected function getMenuManipulators(): array {
     return [
       ['callable' => 'menu.default_tree_manipulators:checkAccess'],

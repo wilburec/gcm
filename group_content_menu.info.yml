@@ -8,4 +8,5 @@ dependencies:
   - drupal:block
   - drupal:menu_ui
   - group:group
+  - group_content_menu:menu_link_reference
 configure: entity.group_content_menu_type.collection

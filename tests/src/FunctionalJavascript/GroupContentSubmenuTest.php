@@ -1,8 +1,8 @@
 <?php
 
-namespace Drupal\Tests\group_content_submenu\FunctionalJavascript;
+namespace Drupal\Tests\group_content_menu\FunctionalJavascript;
 
-use Drupal\field\Entity\FieldConfig;
+use Drupal\Core\Entity\Entity\EntityFormDisplay;
 use Drupal\FunctionalJavascriptTests\WebDriverTestBase;
 use Drupal\group\Entity\Group;
 use Drupal\group\Entity\GroupType;
@@ -16,7 +16,7 @@ use Drupal\system\Entity\Menu;
  *
  * @group group_content_menu
  */
-class GroupContentSubmenuTest extends WebDriverTestBase  {
+class GroupContentSubmenuTest extends WebDriverTestBase {
 
   /**
    * {@inheritdoc}
@@ -24,10 +24,9 @@ class GroupContentSubmenuTest extends WebDriverTestBase  {
   protected static $modules = [
     'group',
     'group_content_menu',
-    'group_content_submenu',
     'menu_link_content',
     'menu_ui',
-    'options'
+    'menu_link_reference',
   ];
 
   /**
@@ -35,32 +34,28 @@ class GroupContentSubmenuTest extends WebDriverTestBase  {
    */
   protected $defaultTheme = 'stark';
 
-  protected $gcmType;
-
-  protected $coreMenuName;
-
-  protected $coreMenuLinkTitle;
-
   /**
    * {@inheritdoc}
    */
   protected function setUp(): void {
     parent::setUp();
     $this->drupalLogin($this->drupalCreateUser(['access administration pages', 'administer menu']));
-    $this->gcmType = $this->randomMachineName();
-    $plugin_id = "group_content_menu:$this->gcmType";
+    $group_content_menu_type = $this->randomMachineName();
+    $plugin_id = "group_content_menu:$group_content_menu_type";
     // Create a group content menu type.
     GroupContentMenuType::create([
-      'id' => $this->gcmType,
+      'id' => $group_content_menu_type,
     ])->save();
-    // Add our fields to this group content menu type.
-    foreach (['parent_menu_name', 'parent_menu_link'] as $field_name) {
-      FieldConfig::create([
-        'entity_type' => 'group_content_menu',
-        'bundle' => $this->gcmType,
-        'field_name' => $field_name,
-      ])->save();
-    }
+    $display = EntityFormDisplay::create([
+      'targetEntityType' => 'group_content_menu',
+      'bundle' => $group_content_menu_type,
+      'mode' => 'default',
+      'status' => TRUE,
+    ]);
+    $component = $display->getComponent('parent');
+    $component['region'] = 'content';
+    $display->setComponent('parent', $component);
+    $display->save();
     // Create a group type.
     $group_type = GroupType::create([
       'id' => $this->randomMachineName(),
@@ -81,17 +76,22 @@ class GroupContentSubmenuTest extends WebDriverTestBase  {
     Group::create(['type' => $group_type->id()])->save();
 
     // Create a core menu.
-    $this->coreMenuName = $this->randomMachineName();
-    Menu::create(['id' => $this->coreMenuName])->save();
+    $menu_name = $this->randomMachineName();
+    Menu::create([
+      'id' => $menu_name,
+      'label' => $this->randomString(),
+    ])->save();
     // Add a link to the core menu.
-    $this->coreMenuLinkTitle = $this->randomString();
     MenuLinkContent::create([
       'link' => ['uri' => 'internal:/admin'],
-      'title' => $this->coreMenuLinkTitle,
-      'menu_name' => $this->coreMenuName,
+      'title' => $this->randomString(),
+      'menu_name' => $menu_name,
     ])->save();
   }
 
+  /**
+   *
+   */
   public function testGroupContentSubmenu() {
     /** @var \Drupal\Tests\WebAssert $assert */
     $assert = $this->assertSession();
@@ -100,38 +100,45 @@ class GroupContentSubmenuTest extends WebDriverTestBase  {
     $core_link = reset($links);
 
     // Load and edit the automatically created group content menu.
-    $gcms = GroupContentMenu::loadMultiple(NULL);
-    $this->assertNotEmpty($gcms);
-    /** @var GroupContentMenu $gcm */
-    $gcm = reset($gcms);
+    $group_content_menus = GroupContentMenu::loadMultiple(NULL);
+    $this->assertNotEmpty($group_content_menus);
+    /** @var \Drupal\group_content_menu\Entity\GroupContentMenu $group_content_menu */
+    $group_content_menu = reset($group_content_menus);
     $group_menu_link_title = $this->randomString();
-    $this->drupalGet($gcm->toUrl('add-menu-link'));//'/group/1/menu/1/add-link'
+    // '/group/1/menu/1/add-link'
+    $this->drupalGet($group_content_menu->toUrl('add-menu-link'));
     $page->fillField('title[0][value]', $group_menu_link_title);
     $page->fillField('link[0][uri]', '/user');
     $page->pressButton('Save');
 
-    $this->drupalGet($gcm->toUrl('edit-form'));
+    $this->drupalGet($group_content_menu->toUrl('edit-form'));
     $page->fillField('label[0][value]', $this->randomString());
-    // @todo: assert textfield here vs select.
-    $assert->optionNotExists('parent_menu_link', $this->coreMenuLinkTitle);
-    $page->selectFieldOption('parent_menu_name', $this->coreMenuName);
+    $value = implode(':', [
+      // This comes from the parent selector.
+      $core_link->getMenuName(),
+      // These two come from the MenuLinkContentDeriver.
+      'menu_link_content',
+      $core_link->uuid(),
+    ]);
+    $assert->optionNotExists('parent[0][id]', $value);
+    $page->selectFieldOption('parent[0][menu_name]', $core_link->getMenuName());
     $assert->assertWaitOnAjaxRequest();
-    $page->selectFieldOption('parent_menu_link', $this->coreMenuLinkTitle);
+    $page->selectFieldOption('parent[0][id]', $value);
     $page->pressButton('Save');
-    $this->drupalGet($core_link->toUrl('edit-form'));
+    foreach (Menu::loadMultiple(NULL) as $menu) {
+      if ($menu->id() === $core_link->getMenuName()) {
+        $this->drupalGet($menu->toUrl('edit-form'));
+        break;
+      }
+    }
     $links = MenuLinkContent::loadMultiple(NULL);
     unset($links[$core_link->id()]);
     $group_link = array_shift($links);
-    $this->assertEmpty($links);;
-    $value = implode(':', [
-      // This comes from the parent selector element.
-      $core_link->getMenuName(),
-      // These two form the plugin ID of the "shadow" link.
-      'gcm',
-      $group_link->getPluginId(),
-    ]);
-    $option = $page->find('xpath', sprintf('//select[@name="menu_parent"]/option[@value="%s"]', $value));
-    // '--' means it's a child.
-    $this->assertSame('-- ' . $group_link->getTitle(), $option->getText());
+    $this->assertEmpty($links);
+    ;
+    $cell = $page->find('xpath', '//table/tbody/tr[2]/td[1]');
+    $this->assertSame(1, count($cell->findAll('css', 'div.indentation')));
+    $this->assertTrue($cell->hasLink($group_link->getTitle()));
   }
+
 }

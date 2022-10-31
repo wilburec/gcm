@@ -12,7 +12,8 @@ use Drupal\Core\Menu\MenuTreeParameters;
 use Drupal\Core\Render\Element;
 use Drupal\Core\Url;
 use Drupal\group\Entity\GroupInterface;
-use Drupal\group_content_menu\GroupContentMenuInterface;
+use Drupal\group_content_menu\GroupContentMenuStorageInterface;
+use Drupal\menu_link_content\Plugin\Menu\MenuLinkContent;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -58,12 +59,18 @@ class GroupContentMenuForm extends ContentEntityForm {
   protected $entity;
 
   /**
+   * @var \Drupal\group_content_menu\GroupContentMenuStorageInterface
+   */
+  protected GroupContentMenuStorageInterface $groupContentMenuStorage;
+
+  /**
    * {@inheritdoc}
    */
   public static function create(ContainerInterface $container) {
     $instance = parent::create($container);
     $instance->menuLinkManager = $container->get('plugin.manager.menu.link');
     $instance->menuTree = $container->get('menu.link_tree');
+    $instance->groupContentMenuStorage = $container->get('entity_type.manager')->getStorage('group_content_menu');
     $instance->linkGenerator = $container->get('link_generator');
     return $instance;
   }
@@ -99,7 +106,7 @@ class GroupContentMenuForm extends ContentEntityForm {
 
     $form['#attached']['library'][] = 'menu_ui/drupal.menu_ui.adminforms';
 
-    $tree = $this->menuTree->load(GroupContentMenuInterface::MENU_PREFIX . $this->entity->id(), new MenuTreeParameters());
+    $tree = $this->groupContentMenuStorage->loadMenuTree($this->entity, new MenuTreeParameters());
 
     // We indicate that a menu administrator is running the menu access check.
     $this->getRequest()->attributes->set('_menu_admin', TRUE);
@@ -276,13 +283,28 @@ class GroupContentMenuForm extends ContentEntityForm {
         ];
         // Use this module's edit route for the menu. This means we don't have
         // to give elevated menu_ui access to edit menu links.
-        $operations['edit']['url'] = Url::fromRoute('entity.group_content_menu.edit_menu_link', [
-          'group' => $group->id(),
-          'group_content_menu' => $this->entity->id(),
-          'menu_link_content' => $link->getMetaData()['entity_id'],
-        ]);
-        // Bring the user back to the menu overview.
-        $operations['edit']['query'] = $this->getRedirectDestination()->getAsArray();
+        if ($link instanceof MenuLinkContent) {
+          $operations['edit']['url'] = Url::fromRoute('entity.group_content_menu.edit_menu_link', [
+            'group' => $group->id(),
+            'group_content_menu' => $this->entity->id(),
+            'menu_link_content' => $link->getMetaData()['entity_id'],
+          ]);
+        }
+        else {
+          // Allow for a custom edit link per plugin.
+          $edit_route = $link->getEditRoute();
+          if ($edit_route) {
+            $operations['edit']['url'] = $edit_route;
+          }
+          else {
+            // Fall back to the standard edit link.
+            $operations['edit'] += [
+              'url' => Url::fromRoute('menu_ui.link_edit', ['menu_link_plugin' => $link->getPluginId()]),
+            ];
+          }
+          // Bring the user back to the menu overview.
+          $operations['edit']['query'] = $this->getRedirectDestination()->getAsArray();
+        }
 
         // Links can either be reset or deleted, not both.
         if ($link->isResettable()) {

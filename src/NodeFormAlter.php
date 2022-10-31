@@ -9,7 +9,6 @@ use Drupal\Core\Menu\MenuParentFormSelectorInterface;
 use Drupal\Core\Session\AccountProxyInterface;
 use Drupal\group\Entity\GroupContentInterface;
 use Drupal\group\Entity\GroupInterface;
-use Drupal\group_content_menu\GroupContentMenuInterface;
 use Drupal\node\NodeInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
@@ -294,8 +293,8 @@ class NodeFormAlter implements ContainerInjectionInterface {
       if ($this->canManageGroupMenuItems($group, $this->currentUser)) {
         foreach (group_content_menu_get_menus_per_group($group) as $group_content) {
           $group_menu = $group_content->getEntity();
-          $mlid = GroupContentMenuInterface::MENU_PREFIX . $group_menu->id();
-          $menus[$mlid] = $group_menu->label() . " ({$group->label()})";
+          assert($group_menu instanceof GroupContentMenuInterface);
+          $menus[$group_menu->getMenuName()] = $group_menu->label() . " ({$group->label()})";
         }
       }
     }

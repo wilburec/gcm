@@ -110,17 +110,17 @@ function group_content_menu_group_insert(EntityInterface $entity) {
       'bundle' => $plugin->getDerivativeId(),
     ]);
     $group_menu->save();
+    assert($group_menu instanceof GroupContentMenuInterface);
 
     // Add menu link for group if enabled.
     $auto_create_home_link = $group_type_configuration['auto_create_home_link'];
     if ($auto_create_home_link) {
-      $menu_name = GroupContentMenuInterface::MENU_PREFIX . $group_menu->id();
       $menu_link = \Drupal::entityTypeManager()->getStorage('menu_link_content')->create([
         'title' => $group_type_configuration['auto_create_home_link_title'],
         'link' => [
           'uri' => 'internal:/group/' . $entity->id(),
         ],
-        'menu_name' => $menu_name,
+        'menu_name' => $group_menu->getMenuName(),
       ]);
       $menu_link->save();
     }

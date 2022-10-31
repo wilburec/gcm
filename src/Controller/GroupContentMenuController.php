@@ -163,9 +163,9 @@ class GroupContentMenuController extends GroupContentController {
    *   Returns the menu link creation form.
    */
   public function addLink(GroupContentMenuInterface $group_content_menu) {
-    $menu_name = GroupContentMenuInterface::MENU_PREFIX . $group_content_menu->id();
     $menu_link = $this->entityTypeManager()->getStorage('menu_link_content')->create([
-      'menu_name' => $menu_name,
+      'menu_name' => $group_content_menu->getMenuName(),
+      'parent' => $group_content_menu->parent->id,
       'bundle' => 'menu_link_content',
     ]);
     return $this->entityFormBuilder()->getForm($menu_link);

@@ -14,4 +14,11 @@ interface GroupContentMenuInterface extends ContentEntityInterface {
    */
   const MENU_PREFIX = 'group_menu_link_content-';
 
+  /**
+   * Gets the menu name for this group content menu.
+   *
+   * @return string
+   */
+  public function getMenuName(): string;
+
 }
