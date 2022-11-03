@@ -49,7 +49,7 @@ class GroupContentMenuRouteProvider extends DefaultHtmlRouteProvider {
           '_title' => 'Add menu link',
           '_controller' => sprintf('%s::addLink', GroupContentMenuController::class),
         ])
-        ->setRequirement('_group_permission', implode('+', $this->getCreatePermissions()))
+        ->setRequirement('_group_permission', 'manage group_content_menu menu items')
         ->setRequirement('_group_installed_content', implode('+', $this->getPluginIds()))
         ->setOption('parameters', [
           'group' => ['type' => 'entity:group'],
@@ -246,20 +246,6 @@ class GroupContentMenuRouteProvider extends DefaultHtmlRouteProvider {
           'group_content_menu' => ['type' => 'entity:group_content_menu'],
         ]);
     }
-  }
-
-  /**
-   * Get create permissions.
-   *
-   * @return array
-   *   List of create permissions.
-   */
-  protected function getCreatePermissions() {
-    $permissions = [];
-    foreach (array_keys(GroupContentMenuType::loadMultiple()) as $entity_type_id) {
-      $permissions[] = "create group_content_menu:$entity_type_id content";
-    }
-    return $permissions ?: ['access group content menu overview'];
   }
 
   /**

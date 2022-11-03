@@ -43,7 +43,6 @@ class GroupContentMenuTest extends GroupBrowserTestBase {
     $role = GroupType::load('default')->getMemberRole();
     $role->grantPermissions([
       'access group content menu overview',
-      sprintf('create group_content_menu:%s content', $this->menuId),
       'manage group_content_menu',
       'manage group_content_menu menu items'
     ]);
@@ -313,8 +312,7 @@ class GroupContentMenuTest extends GroupBrowserTestBase {
     // Add group permissions.
     $role = GroupType::load('default')->getMemberRole();
     $role->grantPermissions([
-      'create group_content_menu:group_menu_one content',
-      'create group_content_menu:group_menu_two content',
+      'manage group_content_menu menu items',
     ]);
     $role->save();
 
@@ -485,7 +483,6 @@ class GroupContentMenuTest extends GroupBrowserTestBase {
       'group_type' => $group_type->id(),
     ]);
     $admin_role->changePermissions([
-      sprintf('create group_content_menu:%s content', $this->menuId) => FALSE,
       'access group content menu overview' => TRUE,
       'manage group_content_menu' => TRUE,
       'manage group_content_menu menu items' => FALSE,
@@ -501,7 +498,6 @@ class GroupContentMenuTest extends GroupBrowserTestBase {
       'group_type' => $group_type->id(),
     ]);
     $menu_admin_role->changePermissions([
-      sprintf('create group_content_menu:%s content', $this->menuId) => TRUE,
       'access group content menu overview' => FALSE,
       'manage group_content_menu' => FALSE,
       'manage group_content_menu menu items' => TRUE,
@@ -512,7 +508,6 @@ class GroupContentMenuTest extends GroupBrowserTestBase {
     // Member role.
     $role = $group_type->getMemberRole();
     $role->changePermissions([
-      sprintf('create group_content_menu:%s content', $this->menuId) => FALSE,
       'access group content menu overview' => FALSE,
       'manage group_content_menu' => FALSE,
       'manage group_content_menu menu items' => FALSE,
