@@ -166,7 +166,6 @@ class GroupContentMenuController extends GroupContentController {
     $menu_link = $this->entityTypeManager()->getStorage('menu_link_content')->create([
       'menu_name' => $group_content_menu->getMenuName(),
       'parent' => $group_content_menu->parent->id,
-      'bundle' => 'menu_link_content',
     ]);
     return $this->entityFormBuilder()->getForm($menu_link);
   }
