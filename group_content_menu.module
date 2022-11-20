@@ -13,8 +13,10 @@ use Drupal\group\Entity\GroupInterface;
 use Drupal\group\Entity\GroupType;
 use Drupal\group_content_menu\Entity\GroupContentMenuType;
 use Drupal\group_content_menu\GroupContentMenuInterface;
+use Drupal\group_content_menu\MenuLinkInsertHelper;
 use Drupal\group_content_menu\NodeFormAlter;
 use Drupal\menu_link_content\Entity\MenuLinkContent;
+use Drupal\menu_link_content\MenuLinkContentInterface;
 use Drupal\node\NodeInterface;
 
 /**
@@ -240,4 +242,13 @@ function group_content_menu_get_menu_link_default(NodeInterface $node, array $me
   }
 
   return $defaults;
+}
+
+/**
+ * Implements hook_ENTITY_TYPE_insert().
+ */
+function group_content_menu_menu_link_content_insert(MenuLinkContentInterface $menu_link_content) {
+  $helper = \Drupal::service('group_content_menu.menu_link_insert_helper');
+  assert($helper instanceof MenuLinkInsertHelper);
+  $helper($menu_link_content);
 }

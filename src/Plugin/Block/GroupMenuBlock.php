@@ -12,6 +12,7 @@ use Drupal\Core\Menu\MenuTreeParameters;
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
 use Drupal\group_content_menu\GroupContentMenuInterface;
 use Drupal\group_content_menu\GroupContentMenuStorageInterface;
+use Drupal\group_content_menu\GroupContentMenuTreeParameters;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -170,7 +171,7 @@ class GroupMenuBlock extends BlockBase implements ContainerFactoryPluginInterfac
       return [];
     }
     if ($this->configuration['expand_all_items']) {
-      $parameters = new MenuTreeParameters();
+      $parameters = new GroupContentMenuTreeParameters();
       $active_trail = $this->menuActiveTrail->getActiveTrailIds($menu_name);
       $parameters->setActiveTrail($active_trail);
     }
