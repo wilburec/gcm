@@ -22,22 +22,7 @@ class GroupContentMenuPermissionProvider extends GroupContentPermissionProvider 
    * {@inheritdoc}
    */
   public function buildPermissions() {
-    $permissions = [];
-
-    $permissions['access group content menu overview'] = $this->buildPermission(
-      'Access group content menu overview',
-      'Access the overview of all menus'
-    );
-    $permissions['manage group_content_menu'] = $this->buildPermission(
-      'Manage menus',
-      'Create, update and delete menus'
-    );
-    $permissions['manage group_content_menu menu items'] = $this->buildPermission(
-      'Manage menu items',
-      'Create, update and delete menu items within group menus'
-    );
-
-    return $permissions;
+    return [];
   }
 
 }
