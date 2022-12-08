@@ -58,9 +58,9 @@ class GroupContentMenuParentFormSelector extends MenuParentFormSelector {
     $options = [];
     /** @var \Drupal\group_content_menu\GroupContentMenuInterface[] $menus */
     foreach ($group_content_menus as $group_content_menu) {
-      $group_contents = $this->entityTypeManager->getStorage('group_content')->loadByEntity($group_content_menu);
-      if ($group_contents) {
-        $menu_group = array_pop($group_contents)->getGroup();
+      $group_relationships = $this->entityTypeManager->getStorage('group_relationship')->loadByEntity($group_content_menu);
+      if ($group_relationships) {
+        $menu_group = array_pop($group_relationships)->getGroup();
         if ($menu_group->id() === $route_group->id()) {
           $options[$group_content_menu->getMenuName()] = $group_content_menu->label() . " ({$menu_group->label()})";
         }

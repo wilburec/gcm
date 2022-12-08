@@ -11,6 +11,8 @@ use Drupal\Core\Render\Element;
 use Drupal\Core\Url;
 use Drupal\group\Entity\GroupInterface;
 use Drupal\group\Entity\GroupType;
+use Drupal\group\Entity\Storage\GroupRelationshipTypeStorageInterface;
+use Drupal\group\Plugin\Group\Relation\GroupRelationTypeManagerInterface;
 use Drupal\group_content_menu\Entity\GroupContentMenuType;
 use Drupal\group_content_menu\GroupContentMenuInterface;
 use Drupal\group_content_menu\MenuLinkInsertHelper;
@@ -99,6 +101,8 @@ function group_content_menu_group_insert(EntityInterface $entity) {
   if (!$plugins) {
     return;
   }
+  $relationship_type_storage = \Drupal::entityTypeManager()->getStorage('group_relationship_type');
+  assert($relationship_type_storage instanceof GroupRelationshipTypeStorageInterface);
 
   foreach ($plugins as $plugin) {
     $group_type_configuration = $plugin->getConfiguration();
@@ -127,13 +131,13 @@ function group_content_menu_group_insert(EntityInterface $entity) {
       $menu_link->save();
     }
 
-    $group_content = \Drupal::entityTypeManager()->getStorage('group_content')->create([
-      'type' => $plugin->getContentTypeConfigId(),
+    $group_relationship = \Drupal::entityTypeManager()->getStorage('group_relationship')->create([
+      'type' => $relationship_type_storage->getRelationshipTypeId($entity->bundle(), $plugin->getPluginId()),
       'gid' => $entity->id(),
       'label' => $group_content_type->label(),
       'entity_id' => $group_menu,
     ]);
-    $group_content->save();
+    $group_relationship->save();
   }
 }
 
@@ -142,8 +146,8 @@ function group_content_menu_group_insert(EntityInterface $entity) {
  */
 function group_content_menu_group_delete(EntityInterface $entity) {
   // Remove the group menu and recursively its links on group deletion.
-  foreach (group_content_menu_get_menus_per_group($entity) as $group_content) {
-    $group_content->getEntity()->delete();
+  foreach (group_content_menu_get_menus_per_group($entity) as $group_relationship) {
+    $group_relationship->getEntity()->delete();
   }
 }
 
@@ -160,7 +164,7 @@ function group_content_menu_get_menus_per_group(GroupInterface $group) {
   $plugins = group_content_menu_get_plugins_per_group($group);
   $instances = [];
   foreach (array_keys($plugins) as $plugin_id) {
-    $instances[] = \Drupal::entityTypeManager()->getStorage('group_content')->loadByGroup($group, $plugin_id);
+    $instances[] = \Drupal::entityTypeManager()->getStorage('group_relationship')->loadByGroup($group, $plugin_id);
   }
   return $instances ? array_merge(...$instances) : [];
 }
@@ -171,13 +175,13 @@ function group_content_menu_get_menus_per_group(GroupInterface $group) {
  * @param \Drupal\group\Entity\GroupInterface $group
  *   The group.
  *
- * @return \Drupal\group\Plugin\GroupContentEnablerInterface[]
+ * @return \Drupal\group\Plugin\Group\Relation\GroupRelationInterface[]
  *   The group menu plugins.
  */
 function group_content_menu_get_plugins_per_group(GroupInterface $group) {
   $group_type = GroupType::load($group->bundle());
-  /** @var \Drupal\group\Plugin\GroupContentEnablerManagerInterface $plugin_manager */
-  $plugin_manager = \Drupal::service('plugin.manager.group_content_enabler');
+  $plugin_manager = \Drupal::service('group_relation_type.manager');
+  assert($plugin_manager instanceof GroupRelationTypeManagerInterface);
   $installed = $plugin_manager->getInstalled($group_type);
   return array_filter($installed->getIterator()->getArrayCopy(), static function ($plugin_id) {
     return strpos($plugin_id, 'group_content_menu:') === 0;

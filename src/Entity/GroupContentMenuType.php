@@ -87,7 +87,7 @@ class GroupContentMenuType extends ConfigEntityBundleBase {
    * Clear cache after group menu types are adjusted.
    */
   protected static function clearCacheOnSave() {
-    \Drupal::service('plugin.manager.group_content_enabler')->clearCachedDefinitions();
+    \Drupal::service('group_relation_type.manager')->clearCachedDefinitions();
     \Drupal::service('router.builder')->rebuild();
 
     // Invalidate the block cache to update menu-based derivatives.

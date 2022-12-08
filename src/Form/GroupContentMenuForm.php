@@ -87,14 +87,14 @@ class GroupContentMenuForm extends ContentEntityForm {
     }
     $group = $form_state->get('group');
     if (!$group) {
-      /** @var \Drupal\group\Entity\GroupContentInterface[] $group_contents */
-      $group_contents = $this->entityTypeManager->getStorage('group_content')->loadByEntity($this->entity);
+      /** @var \Drupal\group\Entity\GroupRelationshipInterface[] $group_relationships */
+      $group_relationships = $this->entityTypeManager->getStorage('group_relationship')->loadByEntity($this->entity);
       // If no related group content, nothing to do. Bail early.
-      if (!$group_contents) {
+      if (!$group_relationships) {
         return $form;
       }
-      $group_content = reset($group_contents);
-      $group = $group_content->getGroup();
+      $group_relationship = reset($group_relationships);
+      $group = $group_relationship->getGroup();
     }
     $form_state->set('group', $group);
 
@@ -416,7 +416,7 @@ class GroupContentMenuForm extends ContentEntityForm {
         if ($updated_values) {
           // Use the ID from the actual plugin instance since the hidden value
           // in the form could be tampered with.
-          $this->menuLinkManager->updateDefinition($element['#item']->link->getPLuginId(), $updated_values);
+          $this->menuLinkManager->updateDefinition($element['#item']->link->getPluginId(), $updated_values);
         }
       }
     }

@@ -4,22 +4,24 @@ namespace Drupal\group_content_menu\Controller;
 
 use Drupal\Core\Link;
 use Drupal\Core\Url;
-use Drupal\group\Entity\Controller\GroupContentController;
+use Drupal\group\Entity\Controller\GroupRelationshipController;
 use Drupal\group\Entity\GroupInterface;
+use Drupal\group\Entity\GroupRelationshipTypeInterface;
+use Drupal\group\Entity\Storage\GroupRelationshipTypeStorageInterface;
 use Drupal\group_content_menu\GroupContentMenuInterface;
 use Drupal\menu_link_content\MenuLinkContentInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 
 /**
- * Returns responses for 'group_content_menu' GroupContent routes.
+ * Returns responses for 'group_content_menu' GroupRelationship routes.
  */
-class GroupContentMenuController extends GroupContentController {
+class GroupContentMenuController extends GroupRelationshipController {
 
   /**
    * The group content plugin manager.
    *
-   * @var \Drupal\group\Plugin\GroupContentEnablerManagerInterface
+   * @var \Drupal\group\Plugin\Relation\GroupRelationTypeManager
    */
   protected $pluginManager;
 
@@ -29,63 +31,34 @@ class GroupContentMenuController extends GroupContentController {
   public static function create(ContainerInterface $container) {
     $instance = parent::create($container);
     $instance->privateTempStoreFactory = $container->get('tempstore.private');
-    $instance->pluginManager = $container->get('plugin.manager.group_content_enabler');
+    $instance->pluginManager = $container->get('group_relation_type.manager');
     return $instance;
   }
 
   /**
    * {@inheritdoc}
    */
-  public function addPage(GroupInterface $group, $create_mode = TRUE) {
-    $bundle_names = $this->addPageBundles($group, $create_mode);
+  public function addPage(GroupInterface $group, $create_mode = TRUE, $base_plugin_id = 'group_content_menu') {
+    $relationship_types = $this->addPageBundles($group, $create_mode, $base_plugin_id);
     // Filter out the bundles the user doesn't have access to. Duplicated from
     // parent class so as to avoid information disclosure.
-    foreach ($bundle_names as $plugin_id => $bundle_name) {
-      if ($create_mode) {
-        $plugin = $group->getGroupType()->getContentPlugin($plugin_id);
-        $access = $plugin->createEntityAccess($group, $this->currentUser());
-      }
-      else {
-        $access_control_handler = $this->entityTypeManager->getAccessControlHandler('group_content');
-        $access = $access_control_handler->createAccess($bundle_name, NULL, ['group' => $group], TRUE);
-      }
-
+    $access_control_handler = $this->entityTypeManager->getAccessControlHandler('group_relationship');
+    foreach ($relationship_types as $bundle_id => $relationship_type) {
+      $access = $access_control_handler->createAccess($bundle_id, NULL, ['group' => $group], TRUE);
       if (!$access->isAllowed()) {
-        unset($bundle_names[$plugin_id]);
+        unset($relationship_types[$bundle_id]);
       }
     }
 
     // Disallow creating multiple menus of the same type.
-    if (count($bundle_names) === 1) {
-      reset($bundle_names);
-      $plugin_id = key($bundle_names);
-      if ($limitation = $this->handleOneMenuLimitation($group, $plugin_id)) {
+    if (count($relationship_types) === 1) {
+      $relationship_type = reset($relationship_types);
+      if ($limitation = $this->handleOneMenuLimitation($group, $relationship_type->getPlugin()->getDerivativeId())) {
         return $limitation;
       }
     }
 
-    $build = parent::addPage($group, $create_mode);
-
-    // Do not interfere with redirects.
-    if (!is_array($build)) {
-      return $build;
-    }
-
-    // Overwrite the label and description for all of the displayed bundles.
-    $storage_handler = $this->entityTypeManager->getStorage('group_content_menu_type');
-    foreach ($this->addPageBundles($group, $create_mode) as $plugin_id => $bundle_name) {
-      if (!empty($build['#bundles'][$bundle_name])) {
-        $plugin = $group->getGroupType()->getContentPlugin($plugin_id);
-        $label = $plugin->getLabel();
-        $bundle_label = $storage_handler->load($plugin->getEntityBundle())->label();
-        $description = $this->t('Add new menu of type %bundle_label to the group.', ['%bundle_label' => $bundle_label]);
-        $build['#bundles'][$bundle_name]['label'] = $bundle_label;
-        $build['#bundles'][$bundle_name]['description'] = $description;
-        $build['#bundles'][$bundle_name]['add_menu'] = Link::createFromRoute($label, 'entity.group_content_menu.add_form', ['group' => $group->id(), 'plugin_id' => $plugin_id]);
-      }
-    }
-
-    return $build;
+    return parent::addPage($group, $create_mode, $base_plugin_id);
   }
 
   /**
@@ -103,14 +76,14 @@ class GroupContentMenuController extends GroupContentController {
    * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
    */
   protected function handleOneMenuLimitation(GroupInterface $group, $plugin_id) {
-    if ($group_contents = $this->entityTypeManager->getStorage('group_content')->loadByGroup($group, $plugin_id)) {
-      $group_content = reset($group_contents);
-      if ($menu_type = $this->entityTypeManager->getStorage('group_content_menu_type')->load($group_content->getEntity()->bundle())) {
+    if ($group_relationships = $this->entityTypeManager->getStorage('group_relationship')->loadByGroup($group, $plugin_id)) {
+      $group_relationship = reset($group_relationships);
+      if ($menu_type = $this->entityTypeManager->getStorage('group_content_menu_type')->load($group_relationship->getEntity()->bundle())) {
         $this->messenger()->addError($this->t('This group already has a menu "%menu" of type "%type". Only one menu per type per group is allowed.', [
-          '%menu' => $group_content->getEntity()->label(),
+          '%menu' => $group_relationship->getEntity()->label(),
           '%type' => $menu_type->label(),
         ]));
-        $route_params = ['group' => $group_content->getGroup()->id()];
+        $route_params = ['group' => $group_relationship->getGroup()->id()];
         $url = Url::fromRoute('entity.group_content_menu.collection', $route_params, ['absolute' => TRUE]);
         return new RedirectResponse($url->toString());
       }
@@ -126,31 +99,6 @@ class GroupContentMenuController extends GroupContentController {
     }
 
     return parent::createForm($group, $plugin_id);
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  protected function addPageBundles(GroupInterface $group, $create_mode) {
-    $bundles = [];
-
-    // Retrieve all group_content_menu plugins for the group's type.
-    $plugin_ids = $this->pluginManager->getInstalledIds($group->getGroupType());
-    foreach ($plugin_ids as $key => $plugin_id) {
-      if (strpos($plugin_id, 'group_content_menu:') !== 0) {
-        unset($plugin_ids[$key]);
-      }
-    }
-
-    // Retrieve all of the responsible group content types, keyed by plugin ID.
-    $storage = $this->entityTypeManager->getStorage('group_content_type');
-    $properties = ['group_type' => $group->bundle(), 'content_plugin' => $plugin_ids];
-    foreach ($storage->loadByProperties($properties) as $bundle => $group_content_type) {
-      /** @var \Drupal\group\Entity\GroupContentTypeInterface $group_content_type */
-      $bundles[$group_content_type->getContentPluginId()] = $bundle;
-    }
-
-    return $bundles;
   }
 
   /**

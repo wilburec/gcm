@@ -15,3 +15,7 @@ services:
     class: Drupal\group_content_menu\MenuTreeStorage
     decorates: menu.tree_storage
     arguments: ['@group_content_menu.menu_tree_storage.inner']
+  group.relation_handler.permission_provider.group_content_menu:
+    class: 'Drupal\group_content_menu\Plugin\Group\RelationHandler\GroupContentMenuPermissionProvider'
+    arguments: ['@group.relation_handler.permission_provider']
+    shared: false

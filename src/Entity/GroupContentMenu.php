@@ -7,7 +7,7 @@ use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\Core\Entity\EntityStorageInterface;
 use Drupal\Core\Entity\EntityTypeInterface;
 use Drupal\Core\Field\BaseFieldDefinition;
-use Drupal\group\Entity\GroupContent;
+use Drupal\group\Entity\GroupRelationship;
 use Drupal\group_content_menu\GroupContentMenuInterface;
 
 /**
@@ -48,6 +48,7 @@ use Drupal\group_content_menu\GroupContentMenuInterface;
  *     "add-menu-link" = "/group/{group}/menu/{group_content_menu}/add-link",
  *     "edit-menu-link" = "/group/{group}/menu/{group_content_menu}/link/{menu_link_content}",
  *     "delete-menu-link" = "/group/{group}/menu/{group_content_menu}/link/{menu_link_content}/delete",
+ *     "canonical" = "/group/{group}/menu/{group_content_menu}",
  *     "edit-form" = "/group/{group}/menu/{group_content_menu}/edit",
  *     "delete-form" = "/group/{group}/menu/{group_content_menu}/delete",
  *     "collection" = "/group/{group}/menus"
@@ -115,10 +116,9 @@ class GroupContentMenu extends ContentEntityBase implements GroupContentMenuInte
     }
     // Remove any group contents related to this menu before removing the menu.
     if ($entity instanceof ContentEntityInterface) {
-      if ($group_contents = GroupContent::loadByEntity($entity)) {
-        /** @var \Drupal\group\Entity\GroupContent $group_content */
-        foreach ($group_contents as $group_content) {
-          $group_content->delete();
+      if ($group_relationships = GroupRelationship::loadByEntity($entity)) {
+        foreach ($group_relationships as $group_relationship) {
+          $group_relationship->delete();
         }
       }
     }
@@ -129,12 +129,12 @@ class GroupContentMenu extends ContentEntityBase implements GroupContentMenuInte
    */
   protected function urlRouteParameters($rel) {
     $uri_route_parameters = parent::urlRouteParameters($rel);
-    /** @var \Drupal\group\Entity\GroupContentInterface[] $group_contents */
-    $group_contents = \Drupal::entityTypeManager()->getStorage('group_content')->loadByEntity($this);
-    if ($group_content = reset($group_contents)) {
+    /** @var \Drupal\group\Entity\GroupRelationshipInterface[] $group_relationships */
+    $group_relationships = \Drupal::entityTypeManager()->getStorage('group_relationship')->loadByEntity($this);
+    if ($group_relationship = reset($group_relationships)) {
       // The group is needed as a route parameter.
-      $uri_route_parameters['group'] = $group_content->getGroup()->id();
-      $uri_route_parameters['group_content_menu_type'] = $group_content->getEntity()->bundle();
+      $uri_route_parameters['group'] = $group_relationship->getGroup()->id();
+      $uri_route_parameters['group_content_menu_type'] = $group_relationship->getEntity()->bundle();
     }
 
     return $uri_route_parameters;

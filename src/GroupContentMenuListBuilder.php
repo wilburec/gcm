@@ -9,6 +9,8 @@ use Drupal\Core\Entity\EntityStorageInterface;
 use Drupal\Core\Entity\EntityTypeInterface;
 use Drupal\Core\Routing\RedirectDestinationInterface;
 use Drupal\group\Entity\GroupContentInterface;
+use Drupal\group\Entity\GroupRelationshipInterface;
+use Drupal\group\Plugin\Group\Relation\GroupRelationInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -66,8 +68,8 @@ class GroupContentMenuListBuilder extends EntityListBuilder {
   public function load() {
     $group = \Drupal::routeMatch()->getParameter('group');
     if ($group) {
-      return array_map(static function (GroupContentInterface $group_content) {
-        return $group_content->getEntity();
+      return array_map(static function (GroupRelationshipInterface $group_relationship) {
+        return $group_relationship->getEntity();
       }, group_content_menu_get_menus_per_group($group));
     }
     return [];
@@ -97,19 +99,19 @@ class GroupContentMenuListBuilder extends EntityListBuilder {
    */
   protected function getDefaultOperations(EntityInterface $entity) {
     $operations = parent::getDefaultOperations($entity);
-    /** @var \Drupal\group\Entity\GroupContentInterface[] $group_contents */
-    $group_contents = \Drupal::entityTypeManager()->getStorage('group_content')->loadByEntity($entity);
-    if ($group_content = reset($group_contents)) {
+    /** @var \Drupal\group\Entity\GroupRelationshipInterface[] $group_relationships */
+    $group_relationships = \Drupal::entityTypeManager()->getStorage('group_relationship')->loadByEntity($entity);
+    if ($group_relationship = reset($group_relationships)) {
       $entity_type_id = $entity->getEntityTypeId();
       $account = \Drupal::currentUser()->getAccount();
-      if ($entity->hasLinkTemplate('edit-form') && $group_content->getGroup()->hasPermission("update own group_content_menu:$entity_type_id entity", $account)) {
+      if ($entity->hasLinkTemplate('edit-form') && $group_relationship->getGroup()->hasPermission("update own group_content_menu:$entity_type_id entity", $account)) {
         $operations['edit'] = [
           'title' => $this->t('Edit'),
           'weight' => 10,
           'url' => $this->ensureDestination($entity->toUrl('edit-form')),
         ];
       }
-      if ($entity->hasLinkTemplate('delete-form') && $group_content->getGroup()->hasPermission("delete own group_content_menu:$entity_type_id entity", $account)) {
+      if ($entity->hasLinkTemplate('delete-form') && $group_relationship->getGroup()->hasPermission("delete own group_content_menu:$entity_type_id entity", $account)) {
         $operations['delete'] = [
           'title' => $this->t('Delete'),
           'weight' => 100,

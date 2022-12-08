@@ -4,12 +4,13 @@ namespace Drupal\Tests\group_content_menu\FunctionalJavascript;
 
 use Drupal\Core\Entity\Entity\EntityFormDisplay;
 use Drupal\FunctionalJavascriptTests\WebDriverTestBase;
-use Drupal\group\Entity\Group;
 use Drupal\group\Entity\GroupType;
+use Drupal\group\PermissionScopeInterface;
 use Drupal\group_content_menu\Entity\GroupContentMenu;
 use Drupal\group_content_menu\Entity\GroupContentMenuType;
 use Drupal\menu_link_content\Entity\MenuLinkContent;
 use Drupal\system\Entity\Menu;
+use Drupal\user\RoleInterface;
 
 /**
  * Test description.
@@ -17,6 +18,8 @@ use Drupal\system\Entity\Menu;
  * @group group_content_menu
  */
 class GroupContentSubmenuTest extends WebDriverTestBase {
+
+  use GroupTestTrait;
 
   /**
    * {@inheritdoc}
@@ -39,9 +42,12 @@ class GroupContentSubmenuTest extends WebDriverTestBase {
    */
   protected function setUp(): void {
     parent::setUp();
-    $this->drupalLogin($this->drupalCreateUser(['access administration pages', 'administer menu']));
+    $this->groupSetUp();
+    $this->drupalLogin($this->groupCreator);
+
     $group_content_menu_type = $this->randomMachineName();
     $plugin_id = "group_content_menu:$group_content_menu_type";
+
     // Create a group content menu type.
     GroupContentMenuType::create([
       'id' => $group_content_menu_type,
@@ -63,17 +69,27 @@ class GroupContentSubmenuTest extends WebDriverTestBase {
     $group_type->save();
     // Install the plugin.
     /** @var \Drupal\group\Entity\Storage\GroupContentTypeStorageInterface $gct_storage */
-    $gct_storage = \Drupal::entityTypeManager()->getStorage('group_content_type');
+    $gct_storage = $this->container->get('entity_type.manager')->getStorage('group_relationship_type');
     $gct_storage
       ->createFromPlugin($group_type, $plugin_id, ['auto_create_group_menu' => TRUE])
       ->save();
     // Add group permission.
-    $group_type
-      ->getMemberRole()
-      ->grantPermissions(['manage group_content_menu', 'manage group_content_menu menu items', "create $plugin_id content"])
-      ->save();
+    $this->createGroupRole([
+      'group_type' => $group_type->id(),
+      'scope' => PermissionScopeInterface::INSIDER_ID,
+      'global_role' => RoleInterface::AUTHENTICATED_ID,
+      'permissions' => [
+        'manage group_content_menu',
+        'manage group_content_menu menu items',
+        "create $plugin_id content",
+      ],
+    ]);
+
     // Create a group. This will create a group content menu as well.
-    Group::create(['type' => $group_type->id()])->save();
+    $this->createGroup([
+      'type' => $group_type->id(),
+      'uid' => $this->groupCreator->id(),
+    ]);
 
     // Create a core menu.
     $menu_name = $this->randomMachineName();
@@ -93,6 +109,8 @@ class GroupContentSubmenuTest extends WebDriverTestBase {
    *
    */
   public function testGroupContentSubmenu() {
+    $this->drupalGet('/user');
+    $this->drupalGet($this->groupCreator->toUrl()->toString());
     /** @var \Drupal\Tests\WebAssert $assert */
     $assert = $this->assertSession();
     $page = $this->getSession()->getPage();
@@ -135,10 +153,22 @@ class GroupContentSubmenuTest extends WebDriverTestBase {
     unset($links[$core_link->id()]);
     $group_link = array_shift($links);
     $this->assertEmpty($links);
-    ;
+
     $cell = $page->find('xpath', '//table/tbody/tr[2]/td[1]');
     $this->assertSame(1, count($cell->findAll('css', 'div.indentation')));
     $this->assertTrue($cell->hasLink($group_link->getTitle()));
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  protected function getGlobalPermissions(): array {
+    return [
+      'view the administration theme',
+      'access administration pages',
+      'access group overview',
+      'administer menu',
+    ];
   }
 
 }
