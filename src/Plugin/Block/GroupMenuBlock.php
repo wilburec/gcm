@@ -8,7 +8,6 @@ use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Menu\MenuActiveTrailInterface;
 use Drupal\Core\Menu\MenuLinkTreeInterface;
-use Drupal\Core\Menu\MenuTreeParameters;
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
 use Drupal\group\Entity\Storage\GroupRelationshipStorageInterface;
 use Drupal\group_content_menu\GroupContentMenuInterface;
@@ -208,7 +207,7 @@ class GroupMenuBlock extends BlockBase implements ContainerFactoryPluginInterfac
 
     }
     if ($menu_instance) {
-      $build['#theme'] = 'menu__group_menu';
+      $build['#theme'] = 'menu__group_menu__' . strtr($menu_instance->bundle(), '-', '_');
     }
     return $build;
   }
@@ -307,7 +306,9 @@ class GroupMenuBlock extends BlockBase implements ContainerFactoryPluginInterfac
   }
 
   /**
+   * The menu link tree manipulators to apply.
    *
+   * @see Drupal\Core\Menu\MenuLinkTreeInterface::transform()
    */
   protected function getMenuManipulators(): array {
     return [
