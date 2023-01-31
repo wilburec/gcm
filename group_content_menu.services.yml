@@ -5,13 +5,3 @@ services:
       - '@entity_type.manager'
     tags:
       - { name: access_check, applies_to: _group_menu_owns_content }
-  group_content_menu.menu_id_helper:
-    class: Drupal\group_content_menu\MenuIdHelper
-    arguments: ['@menu.tree_storage', '@entity_type.manager']
-  group_content_menu.menu_link_insert_helper:
-    class: Drupal\group_content_menu\MenuLinkInsertHelper
-    arguments: ['@menu.tree_storage']
-  group_content_menu.menu_tree_storage:
-    class: Drupal\group_content_menu\MenuTreeStorage
-    decorates: menu.tree_storage
-    arguments: ['@group_content_menu.menu_tree_storage.inner']

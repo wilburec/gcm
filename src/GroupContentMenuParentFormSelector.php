@@ -3,10 +3,7 @@
 namespace Drupal\group_content_menu;
 
 use Drupal\Core\Cache\Cache;
-use Drupal\Core\Entity\EntityTypeManagerInterface;
-use Drupal\Core\Menu\MenuLinkTreeInterface;
 use Drupal\Core\Menu\MenuParentFormSelector;
-use Drupal\Core\StringTranslation\TranslationInterface;
 
 /**
  * Group content menu implementation of the menu parent form selector service.
@@ -14,13 +11,6 @@ use Drupal\Core\StringTranslation\TranslationInterface;
  * The form selector is a list of all appropriate menu links.
  */
 class GroupContentMenuParentFormSelector extends MenuParentFormSelector {
-
-  /**
-   *
-   */
-  public function __construct(MenuLinkTreeInterface $menu_link_tree, EntityTypeManagerInterface $entity_type_manager, TranslationInterface $string_translation, protected MenuIdHelperInterface $menuIdHelper) {
-    parent::__construct($menu_link_tree, $entity_type_manager, $string_translation);
-  }
 
   /**
    * Determine if menu is a group menu.
@@ -33,8 +23,7 @@ class GroupContentMenuParentFormSelector extends MenuParentFormSelector {
    * {@inheritdoc}
    */
   public function parentSelectElement($menu_parent, $id = '', array $menus = NULL) {
-    [$menu_name, $menu_link_plugin_id] = explode(':', $menu_parent, 2);
-    if ($this->menuIdHelper->getGroupContentMenuId($menu_name, $menu_link_plugin_id)) {
+    if (strpos($menu_parent, GroupContentMenuInterface::MENU_PREFIX) !== FALSE) {
       $this->isGroupMenu = TRUE;
     }
     $element = parent::parentSelectElement($menu_parent, $id, $menus);
@@ -62,7 +51,7 @@ class GroupContentMenuParentFormSelector extends MenuParentFormSelector {
       if ($group_contents) {
         $menu_group = array_pop($group_contents)->getGroup();
         if ($menu_group->id() === $route_group->id()) {
-          $options[$group_content_menu->getMenuName()] = $group_content_menu->label() . " ({$menu_group->label()})";
+          $options[GroupContentMenuInterface::MENU_PREFIX . $group_content_menu->id()] = $group_content_menu->label() . " ({$menu_group->label()})";
         }
       }
     }
