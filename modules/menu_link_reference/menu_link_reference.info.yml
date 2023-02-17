@@ -1,5 +1,0 @@
-name: Menu link reference
-type: module
-description: Menu link reference field item and widget
-package: Group
-core_version_requirement: ^9 || ^10
