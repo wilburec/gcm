@@ -2,12 +2,12 @@
 
 namespace Drupal\group_content_menu\Controller;
 
-use Drupal\Core\Link;
+use Drupal\Core\Form\FormState;
 use Drupal\Core\Url;
 use Drupal\group\Entity\Controller\GroupRelationshipController;
 use Drupal\group\Entity\GroupInterface;
-use Drupal\group\Entity\GroupRelationshipTypeInterface;
-use Drupal\group\Entity\Storage\GroupRelationshipTypeStorageInterface;
+use Drupal\group_content_menu\Form\MenuLinkItemDeleteForm;
+use Drupal\group_content_menu\Form\MenuLinkItemForm;
 use Drupal\group_content_menu\GroupContentMenuInterface;
 use Drupal\menu_link_content\MenuLinkContentInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -21,9 +21,14 @@ class GroupContentMenuController extends GroupRelationshipController {
   /**
    * The group content plugin manager.
    *
-   * @var \Drupal\group\Plugin\Relation\GroupRelationTypeManager
+   * @var \Drupal\group\Plugin\Group\Relation\GroupRelationTypeManager
    */
   protected $pluginManager;
+
+  /**
+   * @var \Drupal\Core\DependencyInjection\ClassResolverInterface;
+   */
+  protected $classResolver;
 
   /**
    * {@inheritdoc}
@@ -32,6 +37,7 @@ class GroupContentMenuController extends GroupRelationshipController {
     $instance = parent::create($container);
     $instance->privateTempStoreFactory = $container->get('tempstore.private');
     $instance->pluginManager = $container->get('group_relation_type.manager');
+    $instance->classResolver = $container->get('class_resolver');
     return $instance;
   }
 
@@ -129,7 +135,7 @@ class GroupContentMenuController extends GroupRelationshipController {
    *   Returns the menu link edit form.
    */
   public function editLink(MenuLinkContentInterface $menu_link_content) {
-    return $this->entityFormBuilder()->getForm($menu_link_content);
+    return $this->getForm(MenuLinkItemForm::class, $menu_link_content);
   }
 
   /**
@@ -142,7 +148,19 @@ class GroupContentMenuController extends GroupRelationshipController {
    *   Returns the menu link delete form.
    */
   public function deleteLink(MenuLinkContentInterface $menu_link_content) {
-    return $this->entityFormBuilder()->getForm($menu_link_content, 'delete');
+    return $this->getForm(MenuLinkItemDeleteForm::class, $menu_link_content);
+  }
+
+  private function getForm(string $class, MenuLinkContentInterface $entity) {
+    $form_object = $this->classResolver->getInstanceFromDefinition($class);
+    $form_object->setEntity($entity);
+    $form_object
+      ->setStringTranslation($this->getStringTranslation())
+      ->setModuleHandler($this->moduleHandler())
+      ->setEntityTypeManager($this->entityTypeManager);
+
+    $form_state = new FormState();
+    return $this->formBuilder()->buildForm($form_object, $form_state);
   }
 
 }

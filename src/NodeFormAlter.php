@@ -64,7 +64,6 @@ class NodeFormAlter implements ContainerInjectionInterface {
       $container->get('entity_type.manager'),
       $container->get('menu.parent_form_selector'),
       $container->get('current_user'),
-      $container->get('context.repository')
     );
   }
 
