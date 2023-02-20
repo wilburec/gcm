@@ -222,6 +222,7 @@ class GroupContentMenuTest extends GroupBrowserTestBase {
     $assert->statusCodeEquals(200);
     $page->pressButton('Save');
     $assert->pageTextContains('The menu link has been saved.');
+    $assert->addressEquals('/group/1/menu/1/edit');
 
     // Add menu links to the newly created menu and render the menu.
     $this->drupalGet('/group/1/menu/1/edit');
@@ -238,15 +239,14 @@ class GroupContentMenuTest extends GroupBrowserTestBase {
     $page->selectFieldOption('menu_parent', '-- Group home page');
     $page->pressButton('Save');
     $assert->pageTextContains('The menu link has been saved. ');
-    $this->drupalGet('/group/1');
     $assert->linkExists($link_title);
-    $this->drupalGet('/group/1/menu/1/edit');
     $assert->statusCodeEquals(200);
 
     // Delete the link
     $this->drupalGet('/group/1/menu/1/link/2/delete');
     $page->pressButton('Delete');
     $assert->pageTextContains("The menu link $link_title has been deleted.");
+    $assert->addressEquals('/group/1/menu/1/edit');
 
     // Delete menu.
     $this->drupalGet('/group/1/menu/1/delete');
