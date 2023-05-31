@@ -75,6 +75,7 @@ class GroupContentMenuTest extends GroupBrowserTestBase {
    */
   protected function setUp(): void {
     parent::setUp();
+    $this->setUpAccount();
 
     $this->menuId = strtolower($this->randomMachineName());
 
