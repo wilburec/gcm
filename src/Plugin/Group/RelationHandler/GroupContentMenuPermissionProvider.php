@@ -27,7 +27,7 @@ class GroupContentMenuPermissionProvider implements PermissionProviderInterface 
    */
   public function getPermission($operation, $target, $scope = 'any') {
     if (($target === 'relationship' || $target === 'entity') && $operation == 'create') {
-      return "manage group_content_menu items";
+      return "manage group_content_menu menu items";
     }
     if ($target == 'entity' && in_array($operation, ['view', 'update', 'delete'])) {
       return 'manage group_content_menu';
