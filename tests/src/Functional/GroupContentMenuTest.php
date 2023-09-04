@@ -18,7 +18,7 @@ class GroupContentMenuTest extends GroupBrowserTestBase {
   /**
    * {@inheritdoc}
    */
-  public static $modules = [
+  protected static $modules = [
     'block',
     'group_content_menu',
     'gnode',
