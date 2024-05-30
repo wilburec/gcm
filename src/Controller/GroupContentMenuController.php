@@ -148,11 +148,12 @@ class GroupContentMenuController extends GroupRelationshipController {
    *   Returns the menu link delete form.
    */
   public function deleteLink(MenuLinkContentInterface $menu_link_content) {
-    return $this->getForm(MenuLinkItemDeleteForm::class, $menu_link_content);
+    return $this->getForm(MenuLinkItemDeleteForm::class, $menu_link_content, 'delete');
   }
 
-  private function getForm(string $class, MenuLinkContentInterface $entity) {
+  private function getForm(string $class, MenuLinkContentInterface $entity, string $operation = 'default') {
     $form_object = $this->classResolver->getInstanceFromDefinition($class);
+    $form_object->setOperation($operation);
     $form_object->setEntity($entity);
     $form_object
       ->setStringTranslation($this->getStringTranslation())
