@@ -17,7 +17,8 @@
     "source": "https://git.drupalcode.org/project/group_content_menu"
   },
   "require": {
-    "drupal/group": "^1.0@RC"
+    "drupal/core": "^9.1 || ^10",
+    "drupal/group": "^3.0@beta"
   },
   "minimum-stability": "dev"
 }

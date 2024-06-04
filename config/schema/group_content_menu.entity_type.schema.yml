@@ -11,12 +11,12 @@ group_content_menu.group_content_menu_type.*:
     uuid:
       type: string
 
-group_content_enabler.config.auto_create_group_menu:
+group_relation.config.auto_create_group_menu:
   type: boolean
   label: Auto create a group menu
-group_content_enabler.config.auto_create_home_link:
+group_relation.config.auto_create_home_link:
   type: boolean
   label: Home link
-group_content_enabler.config.auto_create_home_link_title:
+group_relation.config.auto_create_home_link_title:
   type: string
   label: Home title

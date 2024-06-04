@@ -10,6 +10,7 @@ use Drupal\Core\Menu\MenuActiveTrailInterface;
 use Drupal\Core\Menu\MenuLinkTreeInterface;
 use Drupal\Core\Menu\MenuTreeParameters;
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
+use Drupal\group\Entity\Storage\GroupRelationshipStorageInterface;
 use Drupal\group_content_menu\GroupContentMenuInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
@@ -266,15 +267,15 @@ class GroupMenuBlock extends BlockBase implements ContainerFactoryPluginInterfac
       return NULL;
     }
 
-    /** @var \Drupal\group\Entity\Storage\GroupContentStorage $groupStorage */
-    $groupStorage = $this->entityTypeManager->getStorage('group_content');
-    $contentPluginId = $groupStorage->loadByContentPluginId($this->getPluginId());
+    $group_relationship_storage = $this->entityTypeManager->getStorage('group_relationship');
+    assert($group_relationship_storage instanceof GroupRelationshipStorageInterface);
+    $plugin_id = $group_relationship_storage->loadByPluginId($this->getPluginId());
 
-    if (empty($contentPluginId)) {
+    if (empty($plugin_id)) {
       return NULL;
     }
 
-    $instances = $groupStorage->loadByGroup($entity, $this->getPluginId());
+    $instances = $group_relationship_storage->loadByGroup($entity, $this->getPluginId());
     if ($instances) {
       return array_pop($instances)->getEntity();
     }

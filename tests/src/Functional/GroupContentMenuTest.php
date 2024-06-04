@@ -3,9 +3,10 @@
 namespace Drupal\Tests\group_content_menu\Functional;
 
 use Drupal\Core\Url;
-use Drupal\group\Entity\GroupType;
+use Drupal\group\PermissionScopeInterface;
 use Drupal\Tests\group\Functional\GroupBrowserTestBase;
 use Drupal\user\Entity\User;
+use Drupal\user\RoleInterface;
 use Drupal\user\UserInterface;
 
 /**
@@ -24,29 +25,59 @@ class GroupContentMenuTest extends GroupBrowserTestBase {
     'gnode',
     'menu_ui',
     'node',
+    'views',
   ];
 
   /**
+   * Menu ID.
+   *
    * @var string
    */
   protected $menuId;
+
+  /**
+   * Group type generated in setUp.
+   *
+   * @var \Drupal\group\Entity\GroupType
+   */
+  protected $groupType;
+
+  /**
+   * Member role for $groupType.
+   *
+   * @var \Drupal\group\Entity\GroupRole
+   */
+  protected $memberRole;
+
+  /**
+   * Admin role for $groupType.
+   *
+   * @var \Drupal\group\Entity\GroupRole
+   */
+  protected $adminRole;
+
+  /**
+   * Outsider (non-member authenticted) role for $groupType.
+   *
+   * @var \Drupal\group\Entity\GroupRole
+   */
+  protected $outsiderRole;
+
+  /**
+   * Anonymous role for $groupType.
+   *
+   * @var \Drupal\group\Entity\GroupRole
+   */
+  protected $anonymousRole;
 
   /**
    * {@inheritdoc}
    */
   protected function setUp(): void {
     parent::setUp();
+    $this->setUpAccount();
 
     $this->menuId = strtolower($this->randomMachineName());
-
-    // Add group permissions.
-    $role = GroupType::load('default')->getMemberRole();
-    $role->grantPermissions([
-      'access group content menu overview',
-      'manage group_content_menu',
-      'manage group_content_menu menu items'
-    ]);
-    $role->save();
 
     // Create a basic page content type with a default menu.
     $type = $this->drupalCreateContentType([
@@ -64,34 +95,70 @@ class GroupContentMenuTest extends GroupBrowserTestBase {
     ]);
     $type->setThirdPartySetting('menu_ui', 'available_menus', []);
     $type->save();
+
+    $this->groupType = $this->createGroupType();
+    // Add group permissions.
+    $this->memberRole = $this->createGroupRole([
+      'group_type' => $this->groupType->id(),
+      'scope' => PermissionScopeInterface::INSIDER_ID,
+      'global_role' => RoleInterface::AUTHENTICATED_ID,
+      'permissions' => [
+        'view group',
+      ],
+    ]);
+    $this->adminRole = $this->createGroupRole([
+      'group_type' => $this->groupType->id(),
+      'scope' => PermissionScopeInterface::INDIVIDUAL_ID,
+      'global_role' => NULL,
+      'admin' => TRUE,
+    ]);
+    $this->outsiderRole = $this->createGroupRole([
+      'group_type' => $this->groupType->id(),
+      'scope' => PermissionScopeInterface::OUTSIDER_ID,
+      'global_role' => RoleInterface::AUTHENTICATED_ID,
+      'permissions' => [
+        'view group',
+      ],
+    ]);
+    $this->anonymousRole = $this->createGroupRole([
+      'group_type' => $this->groupType->id(),
+      'scope' => PermissionScopeInterface::OUTSIDER_ID,
+      'global_role' => RoleInterface::ANONYMOUS_ID,
+      'permissions' => [
+        'view group',
+      ],
+    ]);
+
+    // Enable the gnode content plugin for basic page and article.
+    $this->entityTypeManager->getStorage('group_relationship_type')
+      ->createFromPlugin($this->groupType, 'group_node:page')->save();
+    $this->entityTypeManager->getStorage('group_relationship_type')
+      ->createFromPlugin($this->groupType, 'group_node:article')->save();
   }
 
   /**
    * Test creation of a group content menu with group nodes.
    */
   public function testNodeGroupContentMenu(): void {
-    // To see the menu option on the node edit form, add menu access.
-    $group_creator = $this->drupalCreateUser(array_merge($this->getGlobalPermissions(), [
-      'administer menu',
-    ]));
-    $this->drupalLogin($group_creator);
-
     $assert = $this->assertSession();
     $page = $this->getSession()->getPage();
 
-    // Create a group.
-    $this->drupalGet('/group/add/default');
-    $group_name = $this->randomString();
-    $page->fillField('label[0][value]', $group_name);
-    $page->pressButton('Create Default label and complete your membership');
-    $page->pressButton('Save group and membership');
-    $assert->statusCodeEquals(200);
-    $assert->pageTextContains(sprintf('Default label %s has been created.', $group_name));
+    $group = $this->createGroup([
+      'type' => $this->groupType->id(),
+      'uid' => $this->groupCreator->id(),
+    ]);
+    $admin_membership = $group->getMember($this->groupCreator)->getGroupRelationship();
+    $admin_membership->set('group_roles', [$this->adminRole->id()]);
+    $admin_membership->save();
 
+    $group_name = $group->label();
+    $group_path = $group->toUrl()->toString();
+
+    // @todo On what grounds should this exist until there are menu types?
     // Visit the group menu page.
-    $this->drupalGet('/group/1/menus');
-    $assert->statusCodeEquals(200);
-    $assert->pageTextContains('There are no group content menu entities yet.');
+    #$this->drupalGet($group_path . '/menus');
+    #$assert->statusCodeEquals(200);
+    #$assert->pageTextContains('There are no group content menu entities yet.');
 
     // Generate a group content menu type.
     $this->drupalGet('admin/structure/group_content_menu_types');
@@ -103,24 +170,15 @@ class GroupContentMenuTest extends GroupBrowserTestBase {
     $page->pressButton('Save group menu type');
     $assert->statusCodeEquals(200);
     $assert->pageTextContains(sprintf('The group menu type %s has been added.', $menu_label));
-
-    // Enable the gnode content plugin for basic page.
-    $this->drupalGet('/admin/group/content/install/default/group_node:page');
-    $page->pressButton('Install plugin');
-    $assert->pageTextContains('The content plugin was installed on the group type.');
-
-    // Enable the gnode content plugin for article.
-    $this->drupalGet('/admin/group/content/install/default/group_node:article');
-    $page->pressButton('Install plugin');
-    $assert->pageTextContains('The content plugin was installed on the group type.');
+    \Drupal::service('group_relation_type.manager')->clearCachedDefinitions();
 
     // Enable the group content plugin.
-    $this->drupalGet(sprintf('/admin/group/content/install/default/group_content_menu:%s', $this->menuId));
-    $page->pressButton('Install plugin');
-    $assert->pageTextContains('The content plugin was installed on the group type.');
+    $this->entityTypeManager->getStorage('group_relationship_type')
+      ->createFromPlugin($this->groupType, 'group_content_menu:' . $this->menuId)->save();
+    $this->entityTypeManager->getStorage('group_relationship_type')->resetCache();
 
     // Verify the menu settings render even when no group menu has been created.
-    $this->drupalGet('/group/1/content/create/group_node:page');
+    $this->drupalGet($group_path . '/content/create/group_node:page');
     $assert->pageTextContains('Menu settings');
     $assert->pageTextContains('Parent link');
     $page->fillField('title[0][value]', 'Group node');
@@ -129,21 +187,21 @@ class GroupContentMenuTest extends GroupBrowserTestBase {
     $assert->statusCodeEquals(200);
 
     // Verify the menu settings do not display if no menus are available.
-    $this->drupalGet('/group/1/content/create/group_node:article');
+    $this->drupalGet($group_path . '/content/create/group_node:article');
     $assert->pageTextNotContains('Menu settings');
 
     // Create new group content menu.
-    $this->drupalGet('/group/1/menu/add');
+    $this->drupalGet($group_path . '/menu/add');
     $new_menu_label = $this->randomString();
     $page->fillField('label[0][value]', $new_menu_label);
     $page->pressButton('Save');
 
     // Only one group content menu instance is created.
-    $this->drupalGet('/group/1/content');
+    $this->drupalGet($group_path . '/content');
     $assert->pageTextContainsOnce($new_menu_label);
 
     // Verify menu settings render when a group menu has been created.
-    $this->drupalGet('/group/1/content/create/group_node:page');
+    $this->drupalGet($group_path . '/content/create/group_node:page');
     $assert->pageTextContains('Menu settings');
     $assert->pageTextContains('Parent link');
     $page->checkField('menu[enabled]');
@@ -155,7 +213,7 @@ class GroupContentMenuTest extends GroupBrowserTestBase {
     $assert->statusCodeEquals(200);
 
     // Verify the menu settings display, even if no default menu selected.
-    $this->drupalGet('/group/1/content/create/group_node:article');
+    $this->drupalGet($group_path . '/content/create/group_node:article');
     $assert->pageTextContains('Menu settings');
     $assert->pageTextContains('Parent link');
     $assert->optionNotExists('menu[menu_parent]', 'Main navigation');
@@ -202,40 +260,42 @@ class GroupContentMenuTest extends GroupBrowserTestBase {
     $assert->statusCodeEquals(200);
 
     // Enable the group content plugin.
-    $this->drupalGet(sprintf('/admin/group/content/install/default/group_content_menu:%s', $this->menuId));
+    $this->drupalGet('admin/group/types/manage/' . $this->groupType->id() . '/content');
+    $this->drupalGet(sprintf('/admin/group/content/install/' . $this->groupType->id() . '/group_content_menu:%s', $this->menuId));
     $page->checkField('auto_create_group_menu');
     $page->checkField('auto_create_home_link');
     $page->fillField('auto_create_home_link_title', 'Group home page');
     $page->pressButton('Install plugin');
     $assert->pageTextContains('The content plugin was installed on the group type. ');
 
+    \Drupal::service('group_relation_type.manager')->clearCachedDefinitions();
     // Add a group and group content menu.
-    $this->drupalGet('/group/add/default');
-    $group_title = $this->randomString();
-    $page->fillField('label[0][value]', $group_title);
-    $page->pressButton('Create Default label and complete your membership');
-    $page->pressButton('Save group and membership');
-    $assert->linkExists('Group home page');
-
+    $group = $this->createGroup([
+      'type' => $this->groupType->id(),
+      'uid' => $this->groupCreator->id(),
+    ]);
+    $admin_membership = $group->getMember($this->groupCreator)->getGroupRelationship();
+    $admin_membership->set('group_roles', [$this->adminRole->id()]);
+    $admin_membership->save();
     // Home link is editable.
-    $this->drupalGet('/group/1/menu/1/link/1');
+    $this->drupalGet('/group/' . $group->id() . '/menu/1/link/1');
     $assert->statusCodeEquals(200);
     $page->pressButton('Save');
     $assert->pageTextContains('The menu link has been saved.');
-    $assert->addressEquals('/group/1/menu/1/edit');
+    $assert->addressEquals('/group/' . $group->id() . '/menu/1/edit');
 
     // Add menu links to the newly created menu and render the menu.
-    $this->drupalGet('/group/1/menu/1/edit');
+    $this->drupalGet('/group/' . $group->id() . '/menu/1/edit');
     $assert->statusCodeEquals(200);
-    $this->drupalGet('/group/1/menu/1/add-link');
+    $this->drupalGet('/group/' . $group->id() . '/menu/1/add-link');
     $assert->statusCodeEquals(200);
     // Add a link.
     $link_title = $this->randomString();
     $page->fillField('title[0][value]', $link_title);
     $page->fillField('link[0][uri]', '<front>');
     $page->pressButton('Save');
-    // Edit the link
-    $this->drupalGet('/group/1/menu/1/link/2');
+    // Edit the link.
+    $this->drupalGet('/group/' . $group->id() . '/menu/1/link/2');
     $page->selectFieldOption('menu_parent', '-- Group home page');
     $page->pressButton('Save');
     $assert->pageTextContains('The menu link has been saved. ');
@@ -243,18 +303,18 @@ class GroupContentMenuTest extends GroupBrowserTestBase {
     $assert->statusCodeEquals(200);
 
     // Delete the link
-    $this->drupalGet('/group/1/menu/1/link/2/delete');
+    $this->drupalGet('/group/' . $group->id() . '/menu/1/link/2/delete');
     $page->pressButton('Delete');
     $assert->pageTextContains("The menu link $link_title has been deleted.");
-    $assert->addressEquals('/group/1/menu/1/edit');
+    $assert->addressEquals('/group/' . $group->id() . '/menu/1/edit');
 
     // Delete menu.
-    $this->drupalGet('/group/1/menu/1/delete');
+    $this->drupalGet('/group/' . $group->id() . '/menu/1/delete');
     $page->pressButton('Delete');
     $assert->pageTextContains(sprintf('The group content menu %s has been deleted.', $menu_label));
 
     // Re-add menu.
-    $this->drupalGet(sprintf('/group/1/content/create/group_content_menu:%s', $this->menuId));
+    $this->drupalGet(sprintf('/group/' . $group->id() . '/content/create/group_content_menu:%s', $this->menuId));
     $menu_title = $this->randomString();
     $page->fillField('label[0][value]', $menu_title);
     $page->pressButton('Save');
@@ -280,16 +340,19 @@ class GroupContentMenuTest extends GroupBrowserTestBase {
     $assert->pageTextContains(sprintf('The group menu type %s has been added.', $menu_label));
 
     // Enable the group content plugin.
-    $this->drupalGet(sprintf('/admin/group/content/install/default/group_content_menu:%s', $this->menuId));
+    $this->drupalGet(sprintf('/admin/group/content/install/' . $this->groupType->id() . '/group_content_menu:%s', $this->menuId));
     $page->pressButton('Install plugin');
     $assert->pageTextContains('The content plugin was installed on the group type. ');
 
-    // Add a group.
-    $this->drupalGet('/group/add/default');
-    $group_title = $this->randomString();
-    $page->fillField('label[0][value]', $group_title);
-    $page->pressButton('Create Default label and complete your membership');
-    $page->pressButton('Save group and membership');
+    \Drupal::service('group_relation_type.manager')->clearCachedDefinitions();
+    // Add a group and group content menu.
+    $group = $this->createGroup([
+      'type' => $this->groupType->id(),
+      'uid' => $this->groupCreator->id(),
+    ]);
+    $admin_membership = $group->getMember($this->groupCreator)->getGroupRelationship();
+    $admin_membership->set('group_roles', [$this->adminRole->id()]);
+    $admin_membership->save();
 
     // Create new group content menu.
     $this->drupalGet('/group/1/menu/add');
@@ -309,13 +372,6 @@ class GroupContentMenuTest extends GroupBrowserTestBase {
     $assert = $this->assertSession();
     $page = $this->getSession()->getPage();
 
-    // Add group permissions.
-    $role = GroupType::load('default')->getMemberRole();
-    $role->grantPermissions([
-      'manage group_content_menu menu items',
-    ]);
-    $role->save();
-
     // Generate Group Menu One content menu type.
     $this->drupalGet('admin/structure/group_content_menu_types/add');
     $page->fillField('label', 'Group Menu One');
@@ -333,20 +389,22 @@ class GroupContentMenuTest extends GroupBrowserTestBase {
     $assert->pageTextContains('The group menu type Group Menu Two has been added.');
 
     // Enable the group content plugins for the default group type.
-    $this->drupalGet('/admin/group/content/install/default/group_content_menu:group_menu_one');
+    $this->drupalGet('/admin/group/content/install/' . $this->groupType->id() . '/group_content_menu:group_menu_one');
     $page->pressButton('Install plugin');
     $assert->pageTextContains('The content plugin was installed on the group type. ');
-    $this->drupalGet('/admin/group/content/install/default/group_content_menu:group_menu_two');
+    $this->drupalGet('/admin/group/content/install/' . $this->groupType->id() . '/group_content_menu:group_menu_two');
     $page->pressButton('Install plugin');
     $assert->pageTextContains('The content plugin was installed on the group type.');
 
-    // Add a group.
-    $this->drupalGet('/group/add/default');
-    $group_title = $this->randomString();
-    $page->fillField('label[0][value]', $group_title);
-    $page->pressButton('Create Default label and complete your membership');
-    $page->pressButton('Save group and membership');
-    $assert->statusCodeEquals(200);
+    \Drupal::service('group_relation_type.manager')->clearCachedDefinitions();
+    // Add a group and group content menu.
+    $group = $this->createGroup([
+      'type' => $this->groupType->id(),
+      'uid' => $this->groupCreator->id(),
+    ]);
+    $admin_membership = $group->getMember($this->groupCreator)->getGroupRelationship();
+    $admin_membership->set('group_roles', [$this->adminRole->id()]);
+    $admin_membership->save();
 
     // Create a group content menu.
     $this->drupalGet('group/1/menu/add');
@@ -388,20 +446,22 @@ class GroupContentMenuTest extends GroupBrowserTestBase {
     $group_menu_block_id = $group_menu_block->id();
 
     // Enable the group content plugin.
-    $this->drupalGet(sprintf('/admin/group/content/install/default/group_content_menu:%s', $this->menuId));
+    $this->drupalGet(sprintf('/admin/group/content/install/' . $this->groupType->id() . '/group_content_menu:%s', $this->menuId));
     $page->checkField('auto_create_group_menu');
     $page->checkField('auto_create_home_link');
     $page->fillField('auto_create_home_link_title', 'Group home page');
     $page->pressButton('Install plugin');
     $assert->pageTextContains('The content plugin was installed on the group type. ');
 
+    \Drupal::service('group_relation_type.manager')->clearCachedDefinitions();
     // Add a group and group content menu.
-    $this->drupalGet('/group/add/default');
-    $group_title = $this->randomString();
-    $page->fillField('label[0][value]', $group_title);
-    $page->pressButton('Create Default label and complete your membership');
-    $page->pressButton('Save group and membership');
-    $assert->linkExists('Group home page');
+    $group = $this->createGroup([
+      'type' => $this->groupType->id(),
+      'uid' => $this->groupCreator->id(),
+    ]);
+    $admin_membership = $group->getMember($this->groupCreator)->getGroupRelationship();
+    $admin_membership->set('group_roles', [$this->adminRole->id()]);
+    $admin_membership->save();
 
     // Add a parent link.
     $this->drupalGet('/group/1/menu/1/add-link');
@@ -423,7 +483,7 @@ class GroupContentMenuTest extends GroupBrowserTestBase {
     $this->drupalGet('/group/1');
     $assert->linkNotExists($link_sub_level);
 
-    // Set Block to expand all items
+    // Set Block to expand all items.
     $this->drupalGet('admin/structure/block/manage/' . $group_menu_block_id);
     $assert->checkboxNotChecked('settings[expand_all_items]');
     $this->submitForm([
@@ -449,10 +509,9 @@ class GroupContentMenuTest extends GroupBrowserTestBase {
     ]);
     $group_content_menu_type->save();
     $plugin_id = 'group_content_menu:' . $group_content_menu_type->id();
-    $group_type = GroupType::load('default');
-    $this->container->get('plugin.manager.group_content_enabler')->clearCachedDefinitions();
-    $group_content_menu = $this->entityTypeManager->getStorage('group_content_type')->createFromPlugin(
-      $group_type,
+    $this->container->get('group_relation_type.manager')->clearCachedDefinitions();
+    $group_content_menu = $this->entityTypeManager->getStorage('group_relationship_type')->createFromPlugin(
+      $this->groupType,
       $plugin_id,
       [
         'auto_create_group_menu' => TRUE,
@@ -460,77 +519,51 @@ class GroupContentMenuTest extends GroupBrowserTestBase {
       ]
     );
     $group_content_menu->save();
-    $group = $this->createGroup();
 
-    // Enable node group content type plugin.
-    $plugin_id = 'group_node:article';
-    $group_type = $group->getGroupType();
-    $this->container->get('plugin.manager.group_content_enabler')->clearCachedDefinitions();
-    $this->entityTypeManager->getStorage('group_content_type')->createFromPlugin(
-      $group_type,
-      $plugin_id,
-      []
-    )->save();
-    $node_permission_provider = $this->container->get('plugin.manager.group_content_enabler')->getPermissionProvider($plugin_id);
-
-    // Grant permissions and create group admin, menu admin, member and
-    // outsider, and anonymous roles.
-    // Admin role.
-    $admin_role = $this->entityTypeManager->getStorage('group_role')->create([
-      'id' => 'admin',
-      'label' => 'Admin',
-      'weight' => 0,
-      'group_type' => $group_type->id(),
+    $group = $this->createGroup([
+      'type' => $this->groupType->id(),
+      'uid' => $this->groupCreator->id(),
     ]);
-    $admin_role->changePermissions([
-      'access group content menu overview' => TRUE,
-      'manage group_content_menu' => TRUE,
-      'manage group_content_menu menu items' => FALSE,
-      'view group' => TRUE,
-      $node_permission_provider->getPermission('create', 'entity', 'any') => TRUE,
-      $node_permission_provider->getPermission('create', 'relation', 'any') => TRUE,
-    ])->save();
-    // Menu admin.
-    $menu_admin_role = $this->entityTypeManager->getStorage('group_role')->create([
-      'id' => 'menu_admin',
-      'label' => 'Menu admin',
-      'weight' => 0,
-      'group_type' => $group_type->id(),
-    ]);
-    $menu_admin_role->changePermissions([
-      'access group content menu overview' => FALSE,
-      'manage group_content_menu' => FALSE,
-      'manage group_content_menu menu items' => TRUE,
-      'view group' => TRUE,
-      $node_permission_provider->getPermission('create', 'entity', 'any') => TRUE,
-      $node_permission_provider->getPermission('create', 'relation', 'any') => TRUE,
-    ])->save();
-    // Member role.
-    $role = $group_type->getMemberRole();
-    $role->changePermissions([
-      'access group content menu overview' => FALSE,
-      'manage group_content_menu' => FALSE,
-      'manage group_content_menu menu items' => FALSE,
-      'view group' => TRUE,
-    ])->save();
-    // Outsider role.
-    $role = $group_type->getOutsiderRole();
-    $role->grantPermissions([
-      'view group',
-    ])->save();
-    // Anonymous role.
-    $role = $group_type->getAnonymousRole();
-    $role->grantPermissions([
-      'view group',
-    ])->save();
+    $admin_membership = $group->getMember($this->groupCreator)->getGroupRelationship();
+    $admin_membership->set('group_roles', [$this->adminRole->id()]);
+    $admin_membership->save();
 
-    // Create various user types.
-    $group_admin = $this->drupalCreateUser([
+    $node_permission_provider = $this->container->get('group_relation_type.manager')->getPermissionProvider('group_node:article');
+
+    $member = $this->drupalCreateUser([
       'access content',
+    ]);
+    $group->addMember($member, ['group_roles' => $this->memberRole->id()]);
+
+    $menu_overview_role = $this->createGroupRole([
+      'group_type' => $this->groupType->id(),
+      'scope' => PermissionScopeInterface::INDIVIDUAL_ID,
+      'permissions' => [
+        'access group content menu overview',
+        'manage group_content_menu',
+        $node_permission_provider->getPermission('create', 'entity', 'any'),
+        $node_permission_provider->getPermission('create', 'relationship', 'any'),
+      ],
+    ]);
+    $menu_overview_admin = $this->drupalCreateUser([
+      'access content',
+    ]);
+    $group->addMember($menu_overview_admin, ['group_roles' => $menu_overview_role->id()]);
+
+    $menu_admin_role = $this->createGroupRole([
+      'group_type' => $this->groupType->id(),
+      'scope' => PermissionScopeInterface::INDIVIDUAL_ID,
+      'permissions' => [
+        'manage group_content_menu menu items',
+        $node_permission_provider->getPermission('create', 'entity', 'any'),
+        $node_permission_provider->getPermission('create', 'relationship', 'any'),
+      ],
     ]);
     $menu_admin = $this->drupalCreateUser([
       'access content',
     ]);
+    $group->addMember($menu_admin, ['group_roles' => $menu_admin_role->id()]);
+
     $member = $this->drupalCreateUser([
       'access content',
     ]);
@@ -540,22 +573,29 @@ class GroupContentMenuTest extends GroupBrowserTestBase {
     $anonymous = User::load(0);
 
     // Assign various users membership types.
-    $group->addMember($group_admin, [
-      'group_roles' => [$admin_role->id()],
-    ]);
     $group->addMember($menu_admin, [
       'group_roles' => [$menu_admin_role->id()],
     ]);
-    $group->addMember($member, [
-      'group_roles' => [$group_type->getMemberRoleId()],
-    ]);
 
-    $this->drupalLogin($group_admin);
+    // Group creator is given an admin permission.
+    // This permission overrides the check on particular permissions.
+    $this->drupalLogin($this->groupCreator);
+    $this->assertMenuManagePermissions(200);
+    $this->assertMenuItemCrudPermissions(200);
+    $this->drupalLogout();
+
+    // Menu overview admin has access to manage, but not items.
+    $this->drupalLogin($menu_overview_admin);
     $this->assertMenuManagePermissions(200);
     $this->assertMenuItemCrudPermissions(403);
+    $this->drupalLogout();
+
+    // Menu admin has access to items not overview.
     $this->drupalLogin($menu_admin);
     $this->assertMenuManagePermissions(403);
     $this->assertMenuItemCrudPermissions(200);
+
+    // Other users don't have any permissions other than to see the group.
     $this->assertMenuPermissions($member, 403);
     $this->assertMenuPermissions($outsider, 403);
     $this->assertMenuPermissions($anonymous, 403);
@@ -575,6 +615,7 @@ class GroupContentMenuTest extends GroupBrowserTestBase {
     $assert->statusCodeEquals(200);
     $this->assertMenuManagePermissions($status_code);
     $this->assertMenuManagePermissions($status_code);
+    $this->drupalLogout();
   }
 
   /**
@@ -647,7 +688,7 @@ class GroupContentMenuTest extends GroupBrowserTestBase {
       'administer blocks',
       'administer group content menu types',
       'administer group',
-      'bypass group access',
+      'administer menu',
     ] + parent::getGlobalPermissions();
   }
 

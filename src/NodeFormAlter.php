@@ -7,9 +7,8 @@ use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Menu\MenuParentFormSelectorInterface;
 use Drupal\Core\Session\AccountProxyInterface;
-use Drupal\group\Entity\GroupContentInterface;
 use Drupal\group\Entity\GroupInterface;
-use Drupal\group_content_menu\GroupContentMenuInterface;
+use Drupal\group\Entity\GroupRelationshipInterface;
 use Drupal\node\NodeInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
@@ -264,12 +263,12 @@ class NodeFormAlter implements ContainerInjectionInterface {
     elseif (!$node->isNew()) {
       // We're on a node's edit form. A node can be added to any number of
       // groups so we must load all groups for the node.
-      $group_contents = $this->entityTypeManager
-        ->getStorage('group_content')
+      $group_relationships = $this->entityTypeManager
+        ->getStorage('group_relationship')
         ->loadByEntity($node);
-      $group_ids = array_map(static function (GroupContentInterface $group_content) {
-        return $group_content->getGroup()->id();
-      }, $group_contents);
+      $group_ids = array_map(static function (GroupRelationshipInterface $group_relationship) {
+        return $group_relationship->getGroup()->id();
+      }, $group_relationships);
       $groups = $this->entityTypeManager
         ->getStorage('group')
         ->loadMultiple($group_ids);

@@ -1,17 +1,17 @@
 <?php
 
-namespace Drupal\group_content_menu\Plugin\GroupContentEnabler;
+namespace Drupal\group_content_menu\Plugin\Group\Relation;
 
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Url;
 use Drupal\group\Entity\GroupInterface;
-use Drupal\group\Plugin\GroupContentEnablerBase;
+use Drupal\group\Plugin\Group\Relation\GroupRelationBase;
 use Drupal\group_content_menu\Entity\GroupContentMenuType;
 
 /**
  * Provides a content enabler for group menus.
  *
- * @GroupContentEnabler(
+ * @GroupRelationType(
  *   id = "group_content_menu",
  *   label = @Translation("Group content menu"),
  *   description = @Translation("Adds group menus and menu items to groups."),
@@ -19,14 +19,14 @@ use Drupal\group_content_menu\Entity\GroupContentMenuType;
  *   entity_access = TRUE,
  *   reference_label = @Translation("Title"),
  *   reference_description = @Translation("The title of the menu to add to the group"),
- *   deriver = "Drupal\group_content_menu\Plugin\GroupContentEnabler\GroupContentMenuDeriver",
- *   handlers = {
- *     "access" = "Drupal\group\Plugin\GroupContentAccessControlHandler",
- *     "permission_provider" = "Drupal\group_content_menu\Plugin\GroupContentMenuPermissionProvider",
- *   }
+ *   deriver = "Drupal\group_content_menu\Plugin\Group\Relation\GroupMenuDeriver",
  * )
+ *
+ * @todo post_install could be used if needed for
+ *  \Drupal::service("router.builder")->rebuild();
+ *  ?
  */
-class GroupContentMenu extends GroupContentEnablerBase {
+class GroupMenu extends GroupRelationBase {
 
   /**
    * Retrieves the menu type this plugin supports.
@@ -35,7 +35,7 @@ class GroupContentMenu extends GroupContentEnablerBase {
    *   The menu type this plugin supports.
    */
   protected function getMenuType() {
-    return GroupContentMenuType::load($this->getEntityBundle());
+    return GroupContentMenuType::load($this->getRelationType()->getEntityBundle());
   }
 
   /**
@@ -122,40 +122,10 @@ class GroupContentMenu extends GroupContentEnablerBase {
   /**
    * {@inheritdoc}
    */
-  protected function getGroupContentPermissions() {
-    $plugin_id = $this->getPluginId();
-
-    $permissions["create $plugin_id content"] = [
-      'title' => 'Relate menu',
-      'description' => 'Allows you to relate a menu to the group.',
-    ];
-    return $permissions;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  protected function getTargetEntityPermissions() {
-    // No special permissions.
-    return [];
-  }
-
-  /**
-   * {@inheritdoc}
-   */
   public function calculateDependencies() {
     $dependencies = parent::calculateDependencies();
-    $dependencies['config'][] = 'group_content_menu.group_content_menu_type.' . $this->getEntityBundle();
+    $dependencies['config'][] = 'group_content_menu.group_content_menu_type.' . $this->getRelationType()->getEntityBundle();
     return $dependencies;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function postInstall() {
-    parent::postInstall();
-    // Rebuild route access to pick up new create menu route permissions.
-    \Drupal::service("router.builder")->rebuild();
   }
 
 }

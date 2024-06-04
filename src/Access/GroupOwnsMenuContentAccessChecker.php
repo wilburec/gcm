@@ -9,6 +9,7 @@ use Drupal\Core\Routing\RouteMatchInterface;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\group\Entity\GroupContentInterface;
 use Drupal\group\Entity\GroupInterface;
+use Drupal\group\Entity\GroupRelationshipInterface;
 use Symfony\Component\Routing\Route;
 
 /**
@@ -61,10 +62,10 @@ class GroupOwnsMenuContentAccessChecker implements AccessInterface {
       return AccessResult::neutral();
     }
 
-    /** @var \Drupal\group\Entity\GroupContentInterface[] $group_contents */
-    $group_contents = $this->entityTypeManager->getStorage('group_content')->loadByEntity($parameters->get('group_content_menu'));
-    $group_content = reset($group_contents);
-    if (!$group_content) {
+    /** @var \Drupal\group\Entity\GroupRelationshipInterface[] $group_relationships */
+    $group_relationships = $this->entityTypeManager->getStorage('group_relationship')->loadByEntity($parameters->get('group_content_menu'));
+    $group_relationship = reset($group_relationships);
+    if (!$group_relationship) {
       return AccessResult::neutral();
     }
 
@@ -74,17 +75,18 @@ class GroupOwnsMenuContentAccessChecker implements AccessInterface {
       return AccessResult::neutral();
     }
 
-    // Don't interfere if the group content isn't a real group content entity.
-    if (!$group_content instanceof GroupContentInterface) {
+    // Don't interfere if the group content isn't a real group relationship entity.
+    if (!$group_relationship instanceof GroupRelationshipInterface) {
       return AccessResult::neutral();
     }
 
     // If we have a group and group content, see if the owner matches.
-    $group_owns_content = $group_content->getGroup()->id() === $group->id();
+    $group_owns_content = $group_relationship->getGroupId() === $group->id();
 
     // Only allow access if the group content is owned by the group and
     // _group_menu_owns_content is set to TRUE or the other way around.
-    return AccessResult::allowedIf($group_owns_content xor !$must_own_content);
+    $result = AccessResult::allowedIf($group_owns_content xor !$must_own_content);
+    return $result;
   }
 
 }
