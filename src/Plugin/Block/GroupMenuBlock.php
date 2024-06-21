@@ -20,7 +20,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * @Block(
  *   id = "group_content_menu",
  *   admin_label = @Translation("Group Menu"),
- *   category = @Translation("Group Menus"),
+ *   category = "Group Menus",
  *   deriver = "Drupal\group_content_menu\Plugin\Derivative\GroupMenuBlock",
  *   context_definitions = {
  *     "group" = @ContextDefinition("entity:group", required = FALSE)
@@ -170,25 +170,44 @@ class GroupMenuBlock extends BlockBase implements ContainerFactoryPluginInterfac
     if (!$menu_name = $this->getMenuName()) {
         return [];
     }
-    if ($this->configuration['expand_all_items']) {
-      $parameters = new MenuTreeParameters();
-      $active_trail = $this->menuActiveTrail->getActiveTrailIds($menu_name);
-      $parameters->setActiveTrail($active_trail);
-    }
-    else {
-      $parameters = $this->menuTree->getCurrentRouteMenuTreeParameters($menu_name);
-    }
+
+    $parameters = $this->menuTree->getCurrentRouteMenuTreeParameters($menu_name);
 
     // Adjust the menu tree parameters based on the block's configuration.
     $level = $this->configuration['level'];
     $depth = $this->configuration['depth'];
     $parameters->setMinDepth($level);
+
     // When the depth is configured to zero, there is no depth limit. When depth
     // is non-zero, it indicates the number of levels that must be displayed.
     // Hence this is a relative depth that we must convert to an actual
     // (absolute) depth, that may never exceed the maximum depth.
     if ($depth > 0) {
       $parameters->setMaxDepth(min($level + $depth - 1, $this->menuTree->maxDepth()));
+    }
+
+    // If the start level is greater than 1, only show menu items from the
+    // current active trail. Adjust the root according to the current position
+    // in the menu in order to determine if we can show the subtree.
+    if ($level > 1) {
+      if (count($parameters->activeTrail) >= $level) {
+        // Active trail array is child-first. Reverse it, and pull the new menu
+        // root based on the parent of the configured start level.
+        $menu_trail_ids = array_reverse(array_values($parameters->activeTrail));
+        $menu_root = $menu_trail_ids[$level - 1];
+        $parameters->setRoot($menu_root)->setMinDepth(1);
+        if ($depth > 0) {
+          $parameters->setMaxDepth(min($depth, $this->menuTree->maxDepth()));
+        }
+      }
+      else {
+        return [];
+      }
+    }
+
+    // If expandedParents is empty, the whole menu tree is built.
+    if ($this->configuration['expand_all_items']) {
+      $parameters->expandedParents = [];
     }
 
     $tree = $this->menuTree->load($menu_name, $parameters);
