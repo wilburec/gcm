@@ -23,7 +23,15 @@ class GroupContentMenuTest extends GroupBrowserTestBase {
    * @var array
    */
   protected static $modules = [
-    'block', 'group_content_menu', 'gnode', 'menu_ui', 'node', 'path', 'path_alias', 'views'
+    'block', 
+    'block_content',
+    'group',
+    'group_content_menu', 
+    'gnode', 
+    'menu_ui', 
+    'node', 
+    'path', 
+    'views',
   ];
 
   /**
@@ -69,11 +77,33 @@ class GroupContentMenuTest extends GroupBrowserTestBase {
   protected $anonymousRole;
 
   /**
+   * User with admin privileges.
+   *
+   * @var \Drupal\user\UserInterface
+   */
+  protected $adminUser;
+
+  /**
    * {@inheritdoc}
    */
   protected function setUp(): void {
     parent::setUp();
-    $this->setUpAccount();
+
+    $this->groupCreator = $this->drupalCreateUser([
+      'administer permissions',
+      'administer users',
+      'administer blocks',
+      'administer block content',
+      'access administration pages',
+      'access content overview',
+      'administer group',
+      'administer group content menu types',
+      'administer url aliases',
+      'create url aliases',
+      'access content overview',
+    ]);
+
+    $this->drupalLogin($this->groupCreator);
 
     $this->menuId = strtolower($this->randomMachineName());
 
@@ -102,6 +132,11 @@ class GroupContentMenuTest extends GroupBrowserTestBase {
       'global_role' => RoleInterface::AUTHENTICATED_ID,
       'permissions' => [
         'view group',
+        'create page content',
+        'edit own page content',
+        'administer url aliases',
+        'create url aliases',
+        'access content overview',
       ],
     ]);
     $this->adminRole = $this->createGroupRole([
@@ -548,6 +583,12 @@ class GroupContentMenuTest extends GroupBrowserTestBase {
     $admin_membership->set('group_roles', [$this->adminRole->id()]);
     $admin_membership->save();
 
+    // Test to see the Group Home Page
+    $this->drupalGet('/group/1');
+    $assert->statusCodeEquals(200);
+    $assert->pageTextContains("Group Home Page");
+    $assert->linkNotExists("/group/1");
+
     // Add a Top Level Node - node/1
     $this->drupalGet('/group/1/content/create/group_node:page');
     $assert->statusCodeEquals(200);
@@ -558,7 +599,12 @@ class GroupContentMenuTest extends GroupBrowserTestBase {
     $page->fillField('menu[title]', $link_top_level);
     $page->selectFieldOption('menu[menu_parent]', '-- Group home page');
     $page->fillField('menu[weight]', 1);
+    $page->fillField('path[0][alias]', '/group/1/node/1');
     $page->pressButton('Save');
+
+    $this->drupalGet('/group/1/node/1');
+    $assert->statusCodeEquals(200);
+    $assert->pageTextContains($link_top_level);
 
     // Add First Level node one. - node/2
     $this->drupalGet('/group/1/content/create/group_node:page');
@@ -570,7 +616,12 @@ class GroupContentMenuTest extends GroupBrowserTestBase {
     $page->fillField('menu[title]', $link_first_level_one);
     $page->selectFieldOption('menu[menu_parent]', '---- ' . $link_top_level);
     $page->fillfield('menu[weight]', 1);
+    $page->fillField('path[0][alias]', '/group/1/node/2');
     $page->pressButton('Save');
+
+    $this->drupalGet('/group/1/node/1');
+    $assert->statusCodeEquals(200);
+    $assert->pageTextContains($link_top_level);
 
     // Test if link shows
     $this->drupalGet('/group/1');
@@ -586,7 +637,7 @@ class GroupContentMenuTest extends GroupBrowserTestBase {
     $page->fillField('menu[title]', $link_first_level_two);
     $page->selectFieldOption('menu[menu_parent]', '---- ' . $link_top_level);
     $page->fillfield('menu[weight]', 2);
-    $page->fillField('path[0][alias]', 'group/1/node/3');
+    $page->fillField('path[0][alias]', '/group/1/node/3');
     $page->pressButton('Save');
 
     // Test if link shows
@@ -603,7 +654,7 @@ class GroupContentMenuTest extends GroupBrowserTestBase {
     $page->fillField('menu[title]', $link_second_first_one);
     $page->selectFieldOption('menu[menu_parent]', '------ ' . $link_first_level_one);
     $page->fillfield('menu[weight]', 1);
-    $page->fillField('path[0][alias]', 'group/1/node/4');
+    $page->fillField('path[0][alias]', '/group/1/node/4');
     $page->pressButton('Save');
 
     // Test if link shows
@@ -620,7 +671,7 @@ class GroupContentMenuTest extends GroupBrowserTestBase {
     $page->fillField('menu[title]', $link_second_first_two);
     $page->selectFieldOption('menu[menu_parent]', '------ ' . $link_first_level_one);
     $page->fillfield('menu[weight]', 2);
-    $page->fillField('path[0][alias]', 'group/1/node/5');
+    $page->fillField('path[0][alias]', '/group/1/node/5');
     $page->pressButton('Save');
 
     $this->drupalGet('/group/1');
@@ -636,7 +687,7 @@ class GroupContentMenuTest extends GroupBrowserTestBase {
     $page->fillField('menu[title]', $link_second_second_one);
     $page->selectFieldOption('menu[menu_parent]', '------ ' . $link_first_level_two);
     $page->fillfield('menu[weight]', 1);
-    $page->fillField('path[0][alias]', 'group/1/node/6');
+    $page->fillField('path[0][alias]', '/group/1/node/6');
     $page->pressButton('Save');
 
     $this->drupalGet('/group/1');
@@ -652,7 +703,7 @@ class GroupContentMenuTest extends GroupBrowserTestBase {
     $page->fillField('menu[title]', $link_second_second_two);
     $page->selectFieldOption('menu[menu_parent]', '------ ' . $link_first_level_two);
     $page->fillfield('menu[weight]', 2);
-    $page->fillField('path[0][alias]', 'group/1/node/7');
+    $page->fillField('path[0][alias]', '/group/1/node/7');
     $page->pressButton('Save');
 
     $this->drupalGet('/group/1');
@@ -696,7 +747,7 @@ class GroupContentMenuTest extends GroupBrowserTestBase {
     ], 'Save block');
 
     // Visit Second level page, and see if we can now see only Level 2 items.
-    $this->drupalGet('group/1/node/2');
+    $this->drupalGet('/group/1/node/2');
     $assert->linkNotExists($link_top_level);
     $assert->linkExists($link_first_level_one);
     $assert->linkExists($link_second_first_one);
@@ -706,7 +757,7 @@ class GroupContentMenuTest extends GroupBrowserTestBase {
     $assert->linkNotExists($link_second_second_two);
 
     // Visit Second level page, and see if we can now see only Level 2 items.
-    $this->drupalGet('group/1/node/3');
+    $this->drupalGet('/group/1/node/3');
     $assert->linkNotExists($link_top_level);
     $assert->linkExists($link_first_level_one);
     $assert->linkNotExists($link_second_first_one);
