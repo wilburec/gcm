@@ -23,14 +23,14 @@ class GroupContentMenuTest extends GroupBrowserTestBase {
    * @var array
    */
   protected static $modules = [
-    'block', 
+    'block',
     'block_content',
     'group',
-    'group_content_menu', 
-    'gnode', 
-    'menu_ui', 
-    'node', 
-    'path', 
+    'group_content_menu',
+    'gnode',
+    'menu_ui',
+    'node',
+    'path',
     'views',
   ];
 
